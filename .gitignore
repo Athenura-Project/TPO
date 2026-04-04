@@ -1,0 +1,16 @@
+# Node Modules
+Backend/node_modules/
+Frontend/node_modules/
+
+# Environment
+Backend/.env
+Frontend/.env
+
+# Uploads
+Backend/src/uploads/
+
+# Logs
+Backend/src/logs/
+
+# build files
+Frontend/dist/
