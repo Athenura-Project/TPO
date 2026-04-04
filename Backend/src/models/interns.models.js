@@ -1,7 +1,6 @@
 import mongoose, { Mongoose } from "mongoose";
 
 const internsSchema = new mongoose.Schema({
-    _id: ObjectId,
     name: {
         type: String,
         required: true
