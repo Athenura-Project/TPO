@@ -1,9 +1,10 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
+import UserLogin from './pages/auth/UserLogin';
 
 // Note: Baad mein jab Admin aur Intern dashboards ban jayenge, 
-// unhe yahan import karke routes mein add kar dena.
+// unhe yahan import karke routes mein add kar dena. 
 
 function App() {
   return (
@@ -14,7 +15,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
 
           {/* Auth Routes (Login/Register) - Inhe baad mein setup kar sakte hain */}
-          <Route path="/login" element={<div className="flex items-center justify-center h-screen uppercase tracking-widest">Login Page Coming Soon</div>} />
+          <Route path="/login" element={<UserLogin />} />
 
           {/* Fallback Route: Redirect to Home if path doesn't exist */}
           <Route path="*" element={<Navigate to="/" replace />} />
