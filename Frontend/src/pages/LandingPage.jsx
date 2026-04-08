@@ -5,6 +5,7 @@ import Hero from '../components/LandingPage/Hero';
 import Features from '../components/LandingPage/Features';
 import Workflow from '../components/LandingPage/Workflow';
 import CTA from '../components/LandingPage/CTA';
+import FAQ from '../components/LandingPage/FAQ';  
 
 const LandingPage = () => {
   return (
@@ -18,6 +19,7 @@ const LandingPage = () => {
 
         <Features />
         <Workflow />
+        <FAQ />
         <CTA />
       </main>
 
