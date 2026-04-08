@@ -182,8 +182,10 @@ const CTA = () => {
               &copy; {new Date().getFullYear()} Athenura TPO System. All rights reserved.
             </p>
             <div className="flex space-x-6">
-              <a href="#" className="text-[#384022]/60 hover:text-[#668824] font-medium text-sm transition-colors duration-200 hover:underline underline-offset-4">Privacy Policy</a>
-              <a href="#" className="text-[#384022]/60 hover:text-[#668824] font-medium text-sm transition-colors duration-200 hover:underline underline-offset-4">Terms of Service</a>
+              {/* Linked to Privacy Policy page */}
+              <a href="/privacy-policy" className="text-[#384022]/60 hover:text-[#668824] font-medium text-sm transition-colors duration-200 hover:underline underline-offset-4">Privacy Policy</a>
+              {/* Linked to Terms of Service page */}
+              <a href="/terms-of-service" className="text-[#384022]/60 hover:text-[#668824] font-medium text-sm transition-colors duration-200 hover:underline underline-offset-4">Terms of Service</a>
             </div>
           </div>
           
