@@ -3,7 +3,8 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import UserLogin from './pages/auth/UserLogin';
 import PrivacyPolicy from './pages/PrivacyPolicy'; 
-import NotFound from './pages/NotFound'; // 404 Page import
+import FAQPage from './pages/FAQPage'; // FAQ Page import kar liya hai
+import NotFound from './pages/NotFound'; 
 
 // Note: Baad mein jab Admin aur Intern dashboards ban jayenge, 
 // unhe yahan import karke routes mein add kar dena. 
@@ -18,6 +19,7 @@ function App() {
 
           {/* Static Pages Routes */}
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/faq" element={<FAQPage />} /> {/* FAQ Route add kar diya */}
 
           {/* Auth Routes (Login/Register) - Inhe baad mein setup kar sakte hain */}
           <Route path="/login" element={<UserLogin />} />

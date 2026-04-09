@@ -32,6 +32,7 @@ const FAQ = () => {
     setActiveIndex(activeIndex === index ? null : index);
   };
 
+  // Showing only top 4 FAQs on the landing page
   const faqs = [
     {
       question: "What makes Athenura different from regular CRMs?",
@@ -48,10 +49,6 @@ const FAQ = () => {
     {
       question: "Is the institutional data completely secure?",
       answer: "Yes, security is our top priority. Athenura uses industry-standard encryption for data at rest and in transit. We also implement strict role-based access control, ensuring interns only see the data assigned to them, while admins have full oversight."
-    },
-    {
-      question: "Can we track the performance of individual interns?",
-      answer: "Yes! The admin dashboard provides a bird's-eye view of your entire operation. You can visualize conversion rates, track daily activity levels of specific interns, and analyze monthly trends through interactive charts."
     }
   ];
 
@@ -94,7 +91,7 @@ const FAQ = () => {
               </p>
 
               {/* Premium Support Widget */}
-              <div className="bg-white/80 backdrop-blur-md border border-[#224D59]/10 rounded-2xl p-6 shadow-[0_10px_40px_rgba(34,77,89,0.05)] relative overflow-hidden group">
+              <div className="bg-white/80 backdrop-blur-md border border-[#224D59]/10 rounded-2xl p-6 shadow-[0_10px_40px_rgba(34,77,89,0.05)] relative overflow-hidden group mb-8">
                 <div className="absolute inset-0 bg-gradient-to-br from-[#B8CC34]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 <div className="relative z-10">
                   {/* Overlapping Avatar Bubbles */}
@@ -107,7 +104,7 @@ const FAQ = () => {
                   <p className="text-sm text-[#384022]/70 font-medium mb-5">
                     Our team is here to help you get the most out of Athenura.
                   </p>
-                  <a href="#contact" className="inline-flex items-center text-sm font-bold text-[#668824] hover:text-[#224D59] transition-colors group/link">
+                  <a href="mailto:support@athenura.com" className="inline-flex items-center text-sm font-bold text-[#668824] hover:text-[#224D59] transition-colors group/link">
                     Contact Support
                     <svg className="w-4 h-4 ml-2 transform group-hover/link:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
@@ -115,6 +112,23 @@ const FAQ = () => {
                   </a>
                 </div>
               </div>
+
+              {/* NEW: View Full FAQ Page Link */}
+              <a 
+                href="/faq" 
+                className="group flex items-center p-4 bg-white rounded-2xl border border-[#224D59]/10 hover:border-[#B8CC34]/60 hover:shadow-lg transition-all duration-300"
+              >
+                <div className="flex-1">
+                  <h4 className="text-[#224D59] font-bold text-base mb-0.5">Explore All FAQs</h4>
+                  <p className="text-[#384022]/60 text-xs font-medium">Read detailed guides for Admins & Interns</p>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-[#F5F7F2] flex items-center justify-center group-hover:bg-[#B8CC34] transition-colors duration-300">
+                  <svg className="w-5 h-5 text-[#224D59] transform group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+                  </svg>
+                </div>
+              </a>
+              
             </div>
           </div>
 
@@ -183,6 +197,25 @@ const FAQ = () => {
                 </div>
               );
             })}
+
+            {/* View Full FAQ Call-to-action button at the bottom of the list */}
+            <div 
+              data-id="faq-view-all"
+              className={`animate-on-scroll mt-8 text-center transition-all duration-700 ease-out delay-500 ${
+                visibleItems['faq-view-all'] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+              }`}
+            >
+              <a 
+                href="/faq" 
+                className="inline-flex items-center px-8 py-4 rounded-xl bg-transparent border-2 border-[#224D59]/20 text-[#224D59] font-bold text-base transition-all duration-300 hover:border-[#B8CC34] hover:bg-[#B8CC34] hover:shadow-[0_10px_25px_rgba(184,204,52,0.3)] hover:-translate-y-1 group"
+              >
+                View Complete Knowledge Base
+                <svg className="w-5 h-5 ml-2 transform group-hover:translate-x-1.5 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+                </svg>
+              </a>
+            </div>
+
           </div>
 
         </div>
