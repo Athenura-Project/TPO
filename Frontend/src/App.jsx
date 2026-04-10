@@ -5,7 +5,7 @@ import UserLogin from './pages/auth/UserLogin';
 import PrivacyPolicy from './pages/PrivacyPolicy'; 
 import FAQPage from './pages/FAQPage'; // FAQ Page import kar liya hai
 import NotFound from './pages/NotFound'; 
-
+import About from './pages/About';
 // Note: Baad mein jab Admin aur Intern dashboards ban jayenge, 
 // unhe yahan import karke routes mein add kar dena. 
 
@@ -23,6 +23,9 @@ function App() {
 
           {/* Auth Routes (Login/Register) - Inhe baad mein setup kar sakte hain */}
           <Route path="/login" element={<UserLogin />} />
+
+          {/* about page */}
+          <Route path='/about' element={<About />} />
 
           {/* Fallback Route (404 Page)*/}
           <Route path="*" element={<NotFound />} />
