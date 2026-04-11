@@ -21,10 +21,10 @@ const Navbar = () => {
     /* Light Theme Wrapper */
     <div className="fixed top-0 left-0 w-full z-50 flex justify-center pointer-events-none pt-4 sm:pt-6">
       <nav
-        className={`relative pointer-events-auto transition-all duration-500 ease-out ${
+        className={`relative pointer-events-auto transition-all duration-500 ease-out bg-white ${
           scrolled
-            ? 'w-[95%] max-w-7xl rounded-full bg-white/80 backdrop-blur-xl border border-gray-200 shadow-[0_8px_30px_rgb(0,0,0,0.08)]'
-            : 'w-[90%] max-w-6xl rounded-full bg-white/50 backdrop-blur-md border border-gray-100 shadow-sm'
+            ? 'w-[95%] max-w-7xl rounded-full backdrop-blur-xl border border-gray-200 shadow-[0_8px_30px_rgb(0,0,0,0.08)]'
+            : 'w-[90%] max-w-6xl rounded-full backdrop-blur-md border border-gray-100 shadow-sm'
         }`}
       >
         <div className="px-5 sm:px-8 py-3">

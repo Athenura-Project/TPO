@@ -1,13 +1,13 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import LandingPage from './pages/LandingPage';
-import UserLogin from './pages/auth/UserLogin';
-import PrivacyPolicy from './pages/PrivacyPolicy'; 
-import FAQPage from './pages/FAQPage'; // FAQ Page import kar liya hai
-import NotFound from './pages/NotFound'; 
-import About from './pages/About';
-// Note: Baad mein jab Admin aur Intern dashboards ban jayenge, 
-// unhe yahan import karke routes mein add kar dena. 
+import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import LandingPage from "./pages/LandingPage";
+import UserLogin from "./pages/auth/UserLogin";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import FAQPage from "./pages/FAQPage"; 
+import NotFound from "./pages/NotFound";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
+
 
 function App() {
   return (
@@ -16,20 +16,18 @@ function App() {
         <Routes>
           {/* Public Route: Landing Page */}
           <Route path="/" element={<LandingPage />} />
-
           {/* Static Pages Routes */}
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-          <Route path="/faq" element={<FAQPage />} /> {/* FAQ Route add kar diya */}
-
+          <Route path="/faq" element={<FAQPage />} />{" "}
+          {/* FAQ Route add kar diya */}
           {/* Auth Routes (Login/Register) - Inhe baad mein setup kar sakte hain */}
           <Route path="/login" element={<UserLogin />} />
-
           {/* about page */}
-          <Route path='/about' element={<About />} />
-
+          <Route path="/about" element={<About />} />
+          {/* contact page */}
+          <Route path="/contact" element={<Contact />} />
           {/* Fallback Route (404 Page)*/}
           <Route path="*" element={<NotFound />} />
-          
         </Routes>
       </div>
     </Router>
