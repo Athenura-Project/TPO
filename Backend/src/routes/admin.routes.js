@@ -2,6 +2,7 @@ import { Router } from "express";
 import { auth, adminOnly } from "../middlewares/auth.middleware.js";
 import multer from "multer";
 import XLSX from "xlsx";
+import TPO from "../models/tpo.model.js";
 
 import {
     getInterns,

@@ -3,6 +3,18 @@ import { ComparePassword, HashPassword } from "../services/password.service.js";
 import { GenerateToken } from "../services/token.service.js";
 import { validateLogin, validateRegister } from "../validators/authValidator.js";
 
+
+
+import OTP from "../models/OTP.js";
+
+import { mailSender } from "../utils/mailSender.js";
+import { otpTemplate } from "../mail/templates/otpTemplate.js";
+
+import bcrypt from "bcrypt";
+import otpGenerator from "otp-generator";
+
+
+
 // 🔹 Register Admin
 const registerAdmin = async (req, res) => {
     try {
@@ -40,6 +52,13 @@ const registerAdmin = async (req, res) => {
             password: hashPassword,
             role: "admin"
         })
+        // ✅ FIX: generate token
+    const token = await GenerateToken({
+      id: admin._id,
+      role: admin.role,
+      email: admin.email,
+    });
+    
 
         res.status(201).json({
             success: true,
@@ -109,4 +128,63 @@ const login = async (req, res) => {
     }
 }
 
-export {registerAdmin , login}
+
+const sendOTP = async (req, res) => {
+    try {
+      const { email } = req.body;
+  
+      const existingUser = await internsModels.findOne({ email });
+  
+      if (existingUser) {
+        return res.json({ success: false, message: "User exists" });
+      }
+  
+      const otp = otpGenerator.generate(6, {
+        upperCaseAlphabets: false,
+        specialChars: false,
+      });
+  
+      await OTP.create({ email, otp });
+  
+      await mailSender(email, "OTP Verification", otpTemplate(otp));
+  
+      res.json({ success: true, message: "OTP sent" });
+  
+    } catch (error) {
+      res.status(500).json({ success: false, message: "Error sending OTP" });
+    }
+  };
+  
+  
+  // 🔹 Signup with OTP
+  const signup = async (req, res) => {
+    try {
+      const { name, email, password, otp } = req.body;
+  
+      const recentOTP = await OTP.find({ email })
+        .sort({ createdAt: -1 })
+        .limit(1);
+  
+      if (!recentOTP.length || recentOTP[0].otp !== otp) {
+        return res.json({ success: false, message: "Invalid OTP" });
+      }
+  
+      const hashedPassword = await bcrypt.hash(password, 10);
+  
+      const user = await internsModels.create({
+        name,
+        email,
+        password: hashedPassword,
+        isVerified: true,
+      });
+  
+      res.json({ success: true, user });
+  
+    } catch (error) {
+      res.status(500).json({ success: false, message: "Signup failed" });
+    }
+  };
+  
+
+
+  export { registerAdmin, login, sendOTP, signup };
