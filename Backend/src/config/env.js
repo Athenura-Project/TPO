@@ -13,9 +13,11 @@ const config = {
 
     MAIL_USER: process.env.MAIL_USER || "omkarjadhav200583@gmail.com",
 
-    MAIL_PASS: process.env.MAIL_PASS || "ivadriusnhpubnxz" // no spaces
-    
-};
+    MAIL_PASS: process.env.MAIL_PASS || "ivadriusnhpubnxz",
 
+    ADMIN_SECRET: process.env.ADMIN_SECRET || "athenura@admin2024", // ✅ add this
+
+    JWT_SECRET: process.env.JWT_SECRET || "your_jwt_secret_here", // ✅ add if missing
+};
 
 export default config;
