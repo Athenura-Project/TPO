@@ -100,28 +100,47 @@ const login = async (req, res) => {
 };
 
 // 🔹 Send OTP
+// 🔹 Send OTP
 const sendOTP = async (req, res) => {
     try {
         const { email } = req.body;
 
+        // Check if user already exists
         const existingUser = await internsModels.findOne({ email });
         if (existingUser) {
-            return res.json({ success: false, message: "User exists" });
+            return res.status(400).json({ // Use 400 for errors
+                success: false, 
+                message: "User already registered with this email" 
+            });
         }
 
+        // Generate OTP
         const otp = otpGenerator.generate(6, {
             upperCaseAlphabets: false,
+            lowerCaseAlphabets: false, // Numbers only is better for UX
             specialChars: false,
         });
 
-        await OTP.create({ email, otp });
-        await mailSender(email, "OTP Verification", otpTemplate(otp));
+        // 🔴 CRITICAL: Await mail sending BEFORE saving to DB or responding
+        try {
+            await mailSender(email, "OTP Verification Code", otpTemplate(otp));
+            console.log("OTP Email sent to:", email);
+        } catch (mailError) {
+            console.error("MailSender failed:", mailError);
+            return res.status(500).json({ 
+                success: false, 
+                message: "Gmail service failed. Check App Password." 
+            });
+        }
 
-        res.json({ success: true, message: "OTP sent" });
+        // Save to DB only after email is successfully sent
+        await OTP.create({ email, otp });
+
+        res.status(200).json({ success: true, message: "OTP sent successfully" });
 
     } catch (error) {
-        console.error("sendOTP error:", error);
-        res.status(500).json({ success: false, message: "Error sending OTP" });
+        console.error("sendOTP logic error:", error);
+        res.status(500).json({ success: false, message: "Server error while generating OTP" });
     }
 };
 
