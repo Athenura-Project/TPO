@@ -18,14 +18,15 @@ const Hero = () => {
   // Premium Skeleton Loading Screen (Escalation Effect)
   if (isLoading) {
     return (
-      <section className="relative w-full min-h-[90vh] flex items-center pt-20 lg:pt-16 overflow-hidden bg-[#F5F7F2]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full py-10 lg:py-20">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+      // REDUCED TOP PADDING HERE: pt-12 lg:pt-20 instead of pt-24 lg:pt-32
+      <section className="relative w-full min-h-[90vh] flex items-center pt-12 pb-12 sm:pt-16 sm:pb-16 lg:pt-20 lg:pb-24 overflow-hidden bg-[#F5F7F2]">
+        {/* WIDER CONTAINER & RESPONSIVE PADDING ADDED HERE */}
+        <div className="w-full max-w-[1536px] mx-auto px-5 sm:px-8 lg:px-12 xl:px-20 relative z-10 py-8 lg:py-12">
+          {/* INCREASED GAP FOR WIDER SCREENS */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 xl:gap-24 items-center">
             
             {/* Left Column Skeletons */}
             <div className="flex flex-col space-y-6 md:space-y-8 w-full">
-              {/* Badge Skeleton */}
-              <div className="w-48 h-8 rounded-full bg-gray-200 animate-pulse"></div>
               {/* Heading Skeletons */}
               <div className="space-y-4">
                 <div className="w-3/4 h-14 md:h-16 rounded-xl bg-gray-300 animate-pulse delay-75"></div>
@@ -36,11 +37,6 @@ const Hero = () => {
                 <div className="w-full h-4 rounded bg-gray-200 animate-pulse delay-150"></div>
                 <div className="w-5/6 h-4 rounded bg-gray-200 animate-pulse delay-200"></div>
                 <div className="w-4/6 h-4 rounded bg-gray-200 animate-pulse delay-300"></div>
-              </div>
-              {/* Button Skeletons */}
-              <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 pt-2">
-                <div className="w-full sm:w-40 h-14 rounded-xl bg-gray-300 animate-pulse delay-400"></div>
-                <div className="w-full sm:w-40 h-14 rounded-xl bg-gray-200 animate-pulse delay-500"></div>
               </div>
             </div>
 
@@ -67,23 +63,19 @@ const Hero = () => {
 
   // Actual Hero Content
   return (
-    <section className={`relative w-full min-h-[90vh] flex items-center pt-20 lg:pt-16 overflow-hidden bg-[#F5F7F2] transition-opacity duration-700 ease-out ${fadeIn ? 'opacity-100' : 'opacity-0'}`}>
+    // REDUCED TOP PADDING HERE AS WELL TO MATCH SKELETON
+    <section className={`relative w-full min-h-[90vh] flex items-center pt-12 pb-12 sm:pt-16 sm:pb-16 lg:pt-20 lg:pb-24 overflow-hidden bg-[#F5F7F2] transition-opacity duration-700 ease-out ${fadeIn ? 'opacity-100' : 'opacity-0'}`}>
       {/* Background decorative ambient glows */}
       <div className="absolute top-0 left-0 w-64 h-64 md:w-[500px] md:h-[500px] bg-[#B8CC34] rounded-full mix-blend-multiply filter blur-[90px] md:blur-[130px] opacity-20 animate-pulse-slow pointer-events-none z-0"></div>
       <div className="absolute bottom-[-10%] right-[-5%] w-64 h-64 md:w-[600px] md:h-[600px] bg-[#224D59] rounded-full mix-blend-multiply filter blur-[100px] md:blur-[150px] opacity-10 animate-pulse-slow pointer-events-none z-0"></div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full py-10 lg:py-20">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+      {/* WIDER CONTAINER & RESPONSIVE PADDING */}
+      <div className="w-full max-w-[1536px] mx-auto px-5 sm:px-8 lg:px-12 xl:px-20 relative z-10 py-8 lg:py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 xl:gap-24 items-center">
           
           {/* Left Column: Text Content */}
           <div className="flex flex-col space-y-6 md:space-y-8 text-center lg:text-left z-20">
             
-            <div className="inline-flex items-center justify-center lg:justify-start">
-              <span className="px-4 py-1.5 rounded-full bg-[#B8CC34]/15 border border-[#B8CC34]/40 text-[#384022] text-xs sm:text-sm font-bold tracking-wide backdrop-blur-sm shadow-sm">
-                Web-Based TPO Platform
-              </span>
-            </div>
-
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-[#224D59] leading-tight tracking-tight">
               Manage Placements <br className="hidden md:block" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#224D59] to-[#668824]">
@@ -95,21 +87,6 @@ const Hero = () => {
               Athenura is a complete web portal for Training & Placement Operations. Assign leads, schedule automated follow-ups, and track intern performance through our interactive dashboard.
             </p>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start space-y-4 sm:space-y-0 sm:space-x-4 pt-2">
-              <a 
-                href="/register" 
-                className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-[#224D59] text-white font-semibold text-base sm:text-lg transition-all duration-300 transform hover:-translate-y-1 hover:shadow-[0_10px_25px_rgba(34,77,89,0.3)] hover:bg-[#1A3A43] text-center"
-              >
-                Create Account
-              </a>
-              
-              <a 
-                href="/login" 
-                className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-white/60 border border-[#224D59]/10 backdrop-blur-md text-[#224D59] font-semibold text-base sm:text-lg transition-all duration-300 transform hover:-translate-y-1 hover:bg-white hover:shadow-lg text-center"
-              >
-                Login to Portal
-              </a>
-            </div>
           </div>
 
           {/* Right Column: Premium Light Glassmorphism Dashboard Mockup */}
