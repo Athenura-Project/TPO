@@ -28,7 +28,8 @@ export default function Footer() {
 
   return (
     <footer className="bg-[#F5F7F2] border-t border-[#224D59]/10 pt-16 pb-8 overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* 🚀 MAX-WIDTH REMOVED: Ab ye har screen par 100% stretch hoga minimal padding ke sath */}
+      <div className="w-full px-5 sm:px-8 lg:px-12">
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 md:gap-8 mb-12">
 
@@ -125,7 +126,7 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="#"
+                  href="/faq"
                   className="inline-block text-[#384022]/70 hover:text-[#668824] font-medium text-sm transition-all duration-300 hover:translate-x-1.5"
                 >
                   Help Center

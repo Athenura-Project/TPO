@@ -8,6 +8,13 @@ import NotFound from "./pages/NotFound";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 
+// Admin dashboard
+import AdminDashboard from "./pages/Adminpage/Dashboard";
+import AdminInternManagement from "./pages/Adminpage/InternManagement";
+import AdminTpo from "./pages/Adminpage/Tpo";
+import AdminAllocation from "./pages/Adminpage/Allocation";
+import AdminAnalytics from "./pages/Adminpage/Analytics";
+import AdminBulk from "./pages/Adminpage/BulkImportPage";
 
 function App() {
   return (
@@ -16,17 +23,29 @@ function App() {
         <Routes>
           {/* Public Route: Landing Page */}
           <Route path="/" element={<LandingPage />} />
+          
           {/* Static Pages Routes */}
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-          <Route path="/faq" element={<FAQPage />} />{" "}
-          {/* FAQ Route add kar diya */}
-          {/* Auth Routes (Login/Register) - Inhe baad mein setup kar sakte hain */}
+          <Route path="/faq" element={<FAQPage />} />
+          
+          {/* Auth Routes (Login/Register) */}
           <Route path="/login" element={<UserLogin />} />
-          {/* about page */}
+          
+          {/* Main Pages */}
           <Route path="/about" element={<About />} />
-          {/* contact page */}
           <Route path="/contact" element={<Contact />} />
-          {/* Fallback Route (404 Page)*/}
+          
+          {/* 🚀 Admin Dashboard Route */}
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/intern" element={<AdminInternManagement />} />
+           <Route path="/admin/tpo" element={<AdminTpo />} />
+           <Route path="/admin/allocation" element={<AdminAllocation />} />
+           <Route path="/admin/analytics" element={<AdminAnalytics />} />
+           <Route path="/admin/bulk/import" element={<AdminBulk />} />
+
+
+           {/*  */}
+          {/* Fallback Route (404 Page) - Ye hamesha last mein hona chahiye */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>
