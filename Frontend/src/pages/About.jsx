@@ -3,6 +3,7 @@ import Navbar from "../components/LandingPage/Navbar";
 import Counter from "../components/Counter";
 import { ActivitySquare, CheckCircle2, ClockFading, Globe, CircleCheck, MessageSquare, Milestone, PenLine, Rocket, Sparkles, Users2 } from "lucide-react";
 import Footer from "../components/LandingPage/Footer";
+import FadeInUp from "../components/FadeInUp";
 
 const About = () => {
   const features = [
@@ -56,6 +57,7 @@ const About = () => {
     <div>
       <Navbar />
       {/* hero section */}
+      <FadeInUp>
       <section className="pt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full py-10 lg:py-20">
           <div className="flex flex-col space-y-6 md:space-y-8 text-center z-20">
@@ -88,6 +90,7 @@ const About = () => {
           </div>
         </div>
       </section>
+      </FadeInUp>
 
       {/* Stats cards */}
       <section className="bg-[#224D59] py-2 flex justify-center">
@@ -120,6 +123,7 @@ const About = () => {
       </section>
 
       {/* Our story section */}
+      <FadeInUp>
       <section className="flex justify-center">
         <div className="px-4 sm:px-6 lg:px-8 py-20 flex flex-col items-center text-center max-w-7xl w-full">
           <p className="text-[#b3c633] font-medium">OUR STORY</p>
@@ -311,6 +315,7 @@ const About = () => {
           </div>
         </div>
       </section>
+      </FadeInUp>
 
       {/* Our Team section */}
       <section className="flex justify-center">
