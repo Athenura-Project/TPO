@@ -4,6 +4,8 @@ import {
   registerAdmin,
   verifyAdmin,
   sendOTP,
+  forgotPassword,   // ✅ ADD THIS
+  resetPassword     // (if you added it too)
 
 } from "../controllers/auth.controller.js";
 
@@ -23,6 +25,11 @@ router.post("/send-otp", sendOTP);               // send OTP
 // ================= LOGIN =================
 router.post("/login", login);
 
+
+// ================= Forget and Reset  =================
+
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password", resetPassword);
 // ================= PROTECTED =================
 router.get("/me", auth, (req, res) => {
   res.json({

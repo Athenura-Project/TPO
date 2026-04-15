@@ -300,6 +300,7 @@ export const registerAdmin = async (req, res) => {
 
 
   export const verifyAdmin = async (req, res) => {
+    
     try {
       const { name, email, password, otp } = req.body;
   
@@ -440,10 +441,81 @@ export const registerAdmin = async (req, res) => {
     }
   };
 
+  export const forgotPassword = async (req, res) => {
+    try {
+      const { email } = req.body;
+  
+      const user = await internsModels.findOne({ email });
+  
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+      }
+  
+      const otp = otpGenerator.generate(6, {
+        digits: true,
+        upperCaseAlphabets: false,
+        lowerCaseAlphabets: false,
+        specialChars: false,
+      });
+  
+      await sendOTPEmail(email, otp);
+  
+      await OTP.deleteMany({ email });
+      await OTP.create({ email, otp });
+  
+      return res.json({
+        success: true,
+        message: "OTP sent for password reset",
+      });
+  
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  };
 
 
-
-
+  export const resetPassword = async (req, res) => {
+    try {
+      const { email, otp, newPassword } = req.body;
+  
+      const record = await OTP.find({ email })
+        .sort({ createdAt: -1 })
+        .limit(1);
+  
+      if (!record.length || record[0].otp !== String(otp)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid OTP",
+        });
+      }
+  
+      const hashed = await bcrypt.hash(newPassword, 10);
+  
+      await internsModels.findOneAndUpdate(
+        { email },
+        { password: hashed }
+      );
+  
+      await OTP.deleteMany({ email });
+  
+      return res.json({
+        success: true,
+        message: "Password reset successful",
+      });
+  
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  };
 
 
 
