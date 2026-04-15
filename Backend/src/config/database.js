@@ -9,6 +9,8 @@ const connectDB = async () => {
     const mongoose = (await import("mongoose")).default;
     await mongoose.connect(config.MONGO_URI);
 
+    console.log("MONGO_URL =", process.env.MONGO_URL);
+
     console.log("MongoDB Connected ✅");
   } catch (error) {
     console.error("Connection fail ❌", error);

@@ -11,13 +11,22 @@ const config = {
 
     NODE_ENV: process.env.NODE_ENV || "development",
 
-    MAIL_USER: process.env.MAIL_USER || "omkarjadhav200583@gmail.com",
 
-    MAIL_PASS: process.env.MAIL_PASS || "ivadriusnhpubnxz",
+    // ✅ FIXED
+  BREVO_API_KEY: process.env.BREVO_API_KEY,
+
+  // ✅ FIXED
+  SENDER_EMAIL: process.env.SENDER_EMAIL,
+
+  // optional mail (not needed if using Brevo)
+  MAIL_USER: process.env.MAIL_USER,
+  MAIL_PASS: process.env.MAIL_PASS,
 
     ADMIN_SECRET: process.env.ADMIN_SECRET || "athenura@admin2024", // ✅ add this
 
     JWT_SECRET: process.env.JWT_SECRET || "your_jwt_secret_here", // ✅ add if missing
 };
+
+console.log("ENV CHECK:", process.env.BREVO_API_KEY);
 
 export default config;
