@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import Navbar from '../components/LandingPage/Navbar';
+import Footer from '../components/LandingPage/Footer';
 
 const PrivacyPolicy = () => {
   const [fadeIn, setFadeIn] = useState(false);
@@ -52,7 +54,7 @@ const PrivacyPolicy = () => {
 
   return (
     <div className={`min-h-screen bg-[#F5F7F2] pt-24 pb-20 relative transition-opacity duration-700 ease-out ${fadeIn ? 'opacity-100' : 'opacity-0'}`}>
-      
+      <Navbar />
       {/* Background Elements Wrapper */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
         {/* Ultra-Premium Subtle Dotted Grid Background */}
@@ -281,6 +283,7 @@ const PrivacyPolicy = () => {
 
         </div>
       </div>
+      <Footer />
     </div>
   );
 };

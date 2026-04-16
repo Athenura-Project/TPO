@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import Navbar from '../components/LandingPage/Navbar'
+import Footer from '../components/LandingPage/Footer'
 
 const FAQPage = () => {
   const [fadeIn, setFadeIn] = useState(false);
@@ -130,6 +132,7 @@ const FAQPage = () => {
 
   return (
     <div className={`min-h-screen bg-[#F5F7F2] pt-24 pb-20 relative transition-opacity duration-700 ease-out ${fadeIn ? 'opacity-100' : 'opacity-0'}`}>
+      <Navbar />
       
       {/* Background Wrapper (Fixes sticky scrolling issues) */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
@@ -293,6 +296,7 @@ const FAQPage = () => {
           </main>
         </div>
       </div>
+      <Footer />
     </div>
   );
 };

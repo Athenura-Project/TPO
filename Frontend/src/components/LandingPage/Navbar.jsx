@@ -16,7 +16,6 @@ const Navbar = () => {
   const handleLogout = () => {
     setLoggingOut(true);
     setTimeout(() => {
-      // ✅ Clear ALL user data from localStorage
       localStorage.removeItem("token");
       localStorage.removeItem("role");
       localStorage.removeItem("user");
@@ -51,9 +50,6 @@ const Navbar = () => {
   return (
     <>
       <style>{`
-        /* ══════════════════════════════════════
-           LOGIN BUTTON — teal gradient + shimmer
-        ══════════════════════════════════════ */
         .btn-login {
           position: relative;
           display: inline-flex;
@@ -102,9 +98,6 @@ const Navbar = () => {
         }
         .btn-login:hover::after { left: 145%; }
 
-        /* ══════════════════════════════════════
-           LOGOUT BUTTON — red ghost → fills red
-        ══════════════════════════════════════ */
         .btn-logout {
           position: relative;
           display: inline-flex;
@@ -143,9 +136,6 @@ const Navbar = () => {
           100% { transform: rotate(360deg) scale(0);   opacity: 0; }
         }
 
-        /* ══════════════════════════════════════
-           MOBILE VARIANTS
-        ══════════════════════════════════════ */
         .btn-login-mobile {
           display: flex;
           align-items: center;
