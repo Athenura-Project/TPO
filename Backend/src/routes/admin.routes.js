@@ -6,16 +6,20 @@ import TPO from "../models/tpo.model.js";
 
 import {
     getInterns,
+    createIntern,
     assignTPO,
-    getAnalytics
+    getAnalytics,
+    getAdminDashboardSummary,
 } from "../controllers/admin.controller.js";
 
 const upload = multer({ dest: "uploads/" });
 const router = Router();
 
 router.get("/interns", auth, adminOnly, getInterns);
+router.post("/interns", auth, adminOnly, createIntern);
 router.post("/assign", auth, adminOnly, assignTPO);
 router.get("/analytics/overall", auth, adminOnly, getAnalytics);
+router.get("/dashboard/summary", auth, adminOnly, getAdminDashboardSummary);
 
 
 router.post(

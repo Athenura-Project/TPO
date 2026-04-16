@@ -11,6 +11,12 @@ const internsSchema = new mongoose.Schema({
         unique: true
     },
     phone: String,
+    branch: String,
+    status: {
+        type: String,
+        enum: ["Active", "Pending", "Placed"],
+        default: "Active",
+    },
     password: {
         type: String,
         required: true

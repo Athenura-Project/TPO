@@ -1,9 +1,39 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { getCurrentUser } from '../../api/adminApi';
 
 const AdminSidebar = () => {
   const location = useLocation();
-  const navigate = useNavigate(); // 🚀 Ye bohot zaroori hai redirect ke liye
+  const navigate = useNavigate();
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const stored = localStorage.getItem('currentUser');
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
+  const initials = useMemo(() => {
+    const name = currentUser?.name || "Admin";
+    const parts = name.trim().split(/\s+/).slice(0, 2);
+    return parts.map((part) => part[0]?.toUpperCase() || "").join("") || "AD";
+  }, [currentUser]);
+
+  useEffect(() => {
+    const syncUser = async () => {
+      try {
+        const data = await getCurrentUser();
+        if (data?.user) {
+          setCurrentUser(data.user);
+          localStorage.setItem('currentUser', JSON.stringify(data.user));
+        }
+      } catch {
+        // Keep fallback user from localStorage
+      }
+    };
+
+    syncUser();
+  }, []);
 
   // 🚀 Logout Function: Storage clear karega aur login pe bhej dega
   const handleLogout = () => {
@@ -110,13 +140,13 @@ const AdminSidebar = () => {
         <div className="flex items-center justify-between p-3 rounded-xl">
           <div className="flex items-center">
             <img 
-              src="https://api.dicebear.com/7.x/avataaars/svg?seed=Admin" 
+              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(initials)}`} 
               alt="Admin" 
               className="w-10 h-10 rounded-lg bg-white/10"
             />
             <div className="ml-3 text-left">
-              <p className="text-sm font-bold text-white leading-none">Super Admin</p>
-              <p className="text-[10px] text-white/50 font-medium mt-1">admin@athenura.com</p>
+              <p className="text-sm font-bold text-white leading-none">{currentUser?.name || "Admin"}</p>
+              <p className="text-[10px] text-white/50 font-medium mt-1">{currentUser?.email || "admin@domain.com"}</p>
             </div>
           </div>
           
@@ -137,3 +167,5 @@ const AdminSidebar = () => {
 };
 
 export default AdminSidebar;
+
+

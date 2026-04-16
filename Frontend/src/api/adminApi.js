@@ -22,6 +22,9 @@ const request = async (path, options = {}) => {
   const data = await parseJsonSafely(response);
 
   if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      throw new Error(data?.message || "Session expired. Please login again.");
+    }
     throw new Error(data?.message || `Request failed with ${response.status}`);
   }
 
@@ -36,6 +39,15 @@ export const getAdminDashboardSummary = async () =>
 export const getAdminInterns = async () =>
   request("/admin/interns", {
     headers: buildHeaders(),
+  });
+
+export const createAdminIntern = async (payload) =>
+  request("/admin/interns", {
+    method: "POST",
+    headers: buildHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(payload),
   });
 
 export const getAdminAnalytics = async () =>
@@ -54,3 +66,7 @@ export const uploadAdminBulkFile = async (file) => {
   });
 };
 
+export const getCurrentUser = async () =>
+  request("/auth/me", {
+    headers: buildHeaders(),
+  });

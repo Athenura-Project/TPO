@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AdminSidebar from '../../components/admin/Sidebar'; 
 import AdminHeader from '../../components/admin/Header';   
-import { getAdminInterns } from '../../api/adminApi';
+import { createAdminIntern, getAdminInterns } from '../../api/adminApi';
 
 const InternsPage = () => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -10,23 +10,32 @@ const InternsPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
+    branch: 'B.Tech CSE',
+    status: 'Active',
+  });
 
   const [interns, setInterns] = useState([]);
 
-  useEffect(() => {
-    const fetchInterns = async () => {
-      setIsLoading(true);
-      setError('');
-      try {
-        const data = await getAdminInterns();
-        setInterns(data?.interns || []);
-      } catch (err) {
-        setError(err.message || 'Failed to fetch interns');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const fetchInterns = async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const data = await getAdminInterns();
+      setInterns(data?.interns || []);
+    } catch (err) {
+      setError(err.message || 'Failed to fetch interns');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchInterns();
   }, []);
 
@@ -65,6 +74,37 @@ const InternsPage = () => {
       .toLowerCase()
       .includes(searchQuery.toLowerCase())
   );
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      email: '',
+      phone: '',
+      password: '',
+      branch: 'B.Tech CSE',
+      status: 'Active',
+    });
+  };
+
+  const handleAddIntern = async () => {
+    if (!formData.name || !formData.email || !formData.password) {
+      setError('Name, email and password are required to add intern');
+      return;
+    }
+
+    setIsSaving(true);
+    setError('');
+    try {
+      await createAdminIntern(formData);
+      setIsModalOpen(false);
+      resetForm();
+      await fetchInterns();
+    } catch (err) {
+      setError(err.message || 'Failed to add intern');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div className="flex h-screen bg-[#F5F7F2] font-sans overflow-hidden selection:bg-[#B8CC34] selection:text-[#224D59]">
@@ -266,24 +306,65 @@ const InternsPage = () => {
               <div className="p-6 space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-[#224D59] uppercase tracking-wider mb-1">Full Name</label>
-                  <input type="text" className="w-full bg-[#F5F7F2] border border-[#224D59]/10 rounded-xl px-4 py-2.5 text-sm text-[#224D59] outline-none focus:border-[#B8CC34] focus:ring-2 focus:ring-[#B8CC34]/20 transition-all" placeholder="e.g. Rahul Kumar" />
+                  <input
+                    type="text"
+                    className="w-full bg-[#F5F7F2] border border-[#224D59]/10 rounded-xl px-4 py-2.5 text-sm text-[#224D59] outline-none focus:border-[#B8CC34] focus:ring-2 focus:ring-[#B8CC34]/20 transition-all"
+                    placeholder="e.g. Rahul Kumar"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-[#224D59] uppercase tracking-wider mb-1">Email Address</label>
-                  <input type="email" className="w-full bg-[#F5F7F2] border border-[#224D59]/10 rounded-xl px-4 py-2.5 text-sm text-[#224D59] outline-none focus:border-[#B8CC34] focus:ring-2 focus:ring-[#B8CC34]/20 transition-all" placeholder="rahul@example.com" />
+                  <input
+                    type="email"
+                    className="w-full bg-[#F5F7F2] border border-[#224D59]/10 rounded-xl px-4 py-2.5 text-sm text-[#224D59] outline-none focus:border-[#B8CC34] focus:ring-2 focus:ring-[#B8CC34]/20 transition-all"
+                    placeholder="rahul@example.com"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-[#224D59] uppercase tracking-wider mb-1">Phone</label>
+                  <input
+                    type="text"
+                    className="w-full bg-[#F5F7F2] border border-[#224D59]/10 rounded-xl px-4 py-2.5 text-sm text-[#224D59] outline-none focus:border-[#B8CC34] focus:ring-2 focus:ring-[#B8CC34]/20 transition-all"
+                    placeholder="9876543210"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-[#224D59] uppercase tracking-wider mb-1">Temporary Password</label>
+                  <input
+                    type="password"
+                    className="w-full bg-[#F5F7F2] border border-[#224D59]/10 rounded-xl px-4 py-2.5 text-sm text-[#224D59] outline-none focus:border-[#B8CC34] focus:ring-2 focus:ring-[#B8CC34]/20 transition-all"
+                    placeholder="At least 6 chars"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-[#224D59] uppercase tracking-wider mb-1">Branch</label>
-                    <select className="w-full bg-[#F5F7F2] border border-[#224D59]/10 rounded-xl px-4 py-2.5 text-sm text-[#224D59] outline-none focus:border-[#B8CC34] transition-all">
+                    <select
+                      className="w-full bg-[#F5F7F2] border border-[#224D59]/10 rounded-xl px-4 py-2.5 text-sm text-[#224D59] outline-none focus:border-[#B8CC34] transition-all"
+                      value={formData.branch}
+                      onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
+                    >
                       <option>B.Tech CSE</option>
                       <option>B.Tech IT</option>
+                      <option>B.Tech ECE</option>
                       <option>MCA</option>
                     </select>
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-[#224D59] uppercase tracking-wider mb-1">Status</label>
-                    <select className="w-full bg-[#F5F7F2] border border-[#224D59]/10 rounded-xl px-4 py-2.5 text-sm text-[#224D59] outline-none focus:border-[#B8CC34] transition-all">
+                    <select
+                      className="w-full bg-[#F5F7F2] border border-[#224D59]/10 rounded-xl px-4 py-2.5 text-sm text-[#224D59] outline-none focus:border-[#B8CC34] transition-all"
+                      value={formData.status}
+                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    >
                       <option>Active</option>
                       <option>Pending</option>
                       <option>Placed</option>
@@ -294,8 +375,12 @@ const InternsPage = () => {
                   <button onClick={() => setIsModalOpen(false)} className="flex-1 py-3 rounded-xl bg-[#F5F7F2] text-[#224D59] font-bold text-sm hover:bg-[#E8EFE9] transition-colors">
                     Cancel
                   </button>
-                  <button className="flex-1 py-3 rounded-xl bg-[#B8CC34] text-[#224D59] font-bold text-sm hover:shadow-[0_0_15px_rgba(184,204,52,0.4)] transition-all">
-                    Save Intern
+                  <button
+                    onClick={handleAddIntern}
+                    disabled={isSaving}
+                    className="flex-1 py-3 rounded-xl bg-[#B8CC34] text-[#224D59] font-bold text-sm hover:shadow-[0_0_15px_rgba(184,204,52,0.4)] transition-all disabled:opacity-70"
+                  >
+                    {isSaving ? 'Saving...' : 'Save Intern'}
                   </button>
                 </div>
               </div>

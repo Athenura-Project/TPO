@@ -1,7 +1,8 @@
 import internsModels from "../models/interns.models.js";
 import TPO from "../models/tpo.model.js";
+import bcrypt from "bcrypt";
 
-// 🔹 Get all interns
+//  Get all interns
 export const getInterns = async (req, res) => {
     try {
         const interns = await internsModels.find({ role: "intern" });
@@ -12,7 +13,7 @@ export const getInterns = async (req, res) => {
     }
 };
 
-// 🔹 Assign TPO to intern
+//  Assign TPO to intern
 export const assignTPO = async (req, res) => {
     try {
         const { tpoId, internId } = req.body;
@@ -43,10 +44,119 @@ export const getAnalytics = async (req, res) => {
     try {
         const totalInterns = await internsModels.countDocuments({ role: "intern" });
         const totalTPOs = await TPO.countDocuments();
+        const convertedTPOs = await TPO.countDocuments({ status: "Converted" });
+        const conversionRate =
+            totalTPOs > 0 ? Number(((convertedTPOs / totalTPOs) * 100).toFixed(1)) : 0;
 
-        res.json({ success: true, totalInterns, totalTPOs });
+        res.json({
+            success: true,
+            totalInterns,
+            totalTPOs,
+            convertedTPOs,
+            conversionRate,
+        });
     } catch (error) {
         console.error("getAnalytics error:", error);
         res.status(500).json({ success: false, message: "Failed to fetch analytics" });
+    }
+};
+
+// Dashboard summary for admin panel
+export const getAdminDashboardSummary = async (req, res) => {
+    try {
+        const [totalInterns, totalTPOs, convertedTPOs, recentInterns, recentTPOs] =
+            await Promise.all([
+                internsModels.countDocuments({ role: "intern" }),
+                TPO.countDocuments(),
+                TPO.countDocuments({ status: "Converted" }),
+                internsModels
+                    .find({ role: "intern" })
+                    .sort({ createdAt: -1 })
+                    .limit(5)
+                    .select("name email createdAt"),
+                TPO.find()
+                    .sort({ createdAt: -1 })
+                    .limit(5)
+                    .select("companyName status assignedTo createdAt")
+                    .populate("assignedTo", "name email"),
+            ]);
+
+        const conversionRate =
+            totalTPOs > 0 ? Number(((convertedTPOs / totalTPOs) * 100).toFixed(1)) : 0;
+
+        const statusBreakdownAgg = await TPO.aggregate([
+            {
+                $group: {
+                    _id: "$status",
+                    count: { $sum: 1 },
+                },
+            },
+        ]);
+
+        const statusBreakdown = statusBreakdownAgg.reduce((acc, item) => {
+            acc[item._id] = item.count;
+            return acc;
+        }, {});
+
+        res.json({
+            success: true,
+            overview: {
+                totalInterns,
+                totalTPOs,
+                convertedTPOs,
+                conversionRate,
+            },
+            statusBreakdown,
+            recentInterns,
+            recentTPOs,
+        });
+    } catch (error) {
+        console.error("getAdminDashboardSummary error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to fetch admin dashboard summary",
+        });
+    }
+};
+
+// Create intern from admin panel
+export const createIntern = async (req, res) => {
+    try {
+        const { name, email, password, phone, branch, status } = req.body;
+
+        if (!name || !email || !password) {
+            return res.status(400).json({
+                success: false,
+                message: "name, email and password are required",
+            });
+        }
+
+        const existing = await internsModels.findOne({ email });
+        if (existing) {
+            return res.status(400).json({
+                success: false,
+                message: "Intern with this email already exists",
+            });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const intern = await internsModels.create({
+            name,
+            email,
+            phone,
+            password: hashedPassword,
+            role: "intern",
+            branch,
+            status,
+        });
+
+        res.status(201).json({
+            success: true,
+            message: "Intern created successfully",
+            intern,
+        });
+    } catch (error) {
+        console.error("createIntern error:", error);
+        res.status(500).json({ success: false, message: "Failed to create intern" });
     }
 };
