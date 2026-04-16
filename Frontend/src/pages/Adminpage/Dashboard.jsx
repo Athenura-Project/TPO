@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getAdminDashboardSummary } from '../../api/adminApi';
 
 // Importing our newly created Layout Components
 import AdminSidebar from '../../components/admin/Sidebar'; // Adjust path if needed
@@ -9,6 +10,26 @@ const AdminDashboard = () => {
   // Global states for Dashboard Layout
   const [activeTab, setActiveTab] = useState('Overview');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [summary, setSummary] = useState(null);
+
+  useEffect(() => {
+    const fetchSummary = async () => {
+      setIsLoading(true);
+      setError('');
+      try {
+        const data = await getAdminDashboardSummary();
+        setSummary(data);
+      } catch (err) {
+        setError(err.message || 'Failed to load dashboard summary');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSummary();
+  }, []);
 
   // Content Animation Variants
   const containerVariants = {
@@ -24,13 +45,29 @@ const AdminDashboard = () => {
     show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
   };
 
-  // Mock Data for Stats
+  const overview = summary?.overview;
+  const statusBreakdown = summary?.statusBreakdown || {};
+
   const stats = [
-    { title: "Total Students", value: "1,248", increment: "+12%", color: "from-[#224D59] to-[#1A3A43]", text: "text-white" },
-    { title: "Active Interns", value: "24", increment: "+4 new", color: "bg-white", text: "text-[#224D59]" },
-    { title: "Pending Leads", value: "142", increment: "-15% (Good)", color: "bg-white", text: "text-[#224D59]" },
-    { title: "TPO Conversion", value: "84.2%", increment: "+2.4%", color: "bg-[#B8CC34]", text: "text-[#224D59]" }
+    { title: "Total Interns", value: overview?.totalInterns ?? 0, increment: "Live", color: "from-[#224D59] to-[#1A3A43]", text: "text-white" },
+    { title: "Total TPOs", value: overview?.totalTPOs ?? 0, increment: "Live", color: "bg-white", text: "text-[#224D59]" },
+    { title: "Converted TPOs", value: overview?.convertedTPOs ?? 0, increment: "Live", color: "bg-white", text: "text-[#224D59]" },
+    { title: "TPO Conversion", value: `${overview?.conversionRate ?? 0}%`, increment: "Live", color: "bg-[#B8CC34]", text: "text-[#224D59]" }
   ];
+
+  const recentInterns = (summary?.recentInterns || []).map((intern) => ({
+    log: `${intern?.name || 'Intern'} joined`,
+    time: intern?.createdAt ? new Date(intern.createdAt).toLocaleDateString() : 'N/A',
+    status: 'bg-[#B8CC34]',
+  }));
+
+  const recentTpos = (summary?.recentTPOs || []).map((tpo) => ({
+    log: `${tpo?.companyName || 'TPO'} (${tpo?.status || 'Unknown'})`,
+    time: tpo?.createdAt ? new Date(tpo.createdAt).toLocaleDateString() : 'N/A',
+    status: 'bg-[#224D59]',
+  }));
+
+  const activityItems = [...recentInterns, ...recentTpos].slice(0, 6);
 
   return (
     <div className="flex h-screen bg-[#F5F7F2] font-sans overflow-hidden selection:bg-[#B8CC34] selection:text-[#224D59]">
@@ -101,8 +138,21 @@ const AdminDashboard = () => {
               </div>
             </motion.div>
 
+            {error && (
+              <motion.div variants={itemVariants} className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                {error}
+              </motion.div>
+            )}
+
+            {isLoading && (
+              <motion.div variants={itemVariants} className="flex justify-center py-10">
+                <div className="w-10 h-10 border-4 border-[#B8CC34]/30 border-t-[#B8CC34] rounded-full animate-spin"></div>
+              </motion.div>
+            )}
+
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {!isLoading && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               {stats.map((stat, index) => (
                 <motion.div 
                   key={index} 
@@ -116,7 +166,8 @@ const AdminDashboard = () => {
                   </div>
                 </motion.div>
               ))}
-            </div>
+              </div>
+            )}
 
             {/* Main Charts & Lists Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -153,12 +204,7 @@ const AdminDashboard = () => {
               <motion.div variants={itemVariants} className="bg-white/80 backdrop-blur-xl border border-[#224D59]/10 rounded-3xl p-6 shadow-sm flex flex-col">
                 <h3 className="text-lg font-extrabold text-[#224D59] mb-6">Recent Activity</h3>
                 <div className="space-y-5 flex-1">
-                  {[
-                    { log: "Rahul added Google to targets", time: "10 mins ago", status: "bg-[#B8CC34]" },
-                    { log: "Priya converted Microsoft lead", time: "1 hour ago", status: "bg-green-500" },
-                    { log: "Bulk student data imported", time: "3 hours ago", status: "bg-[#224D59]" },
-                    { log: "Follow-up reminder sent", time: "Yesterday", status: "bg-orange-400" },
-                  ].map((item, i) => (
+                  {(activityItems.length ? activityItems : [{ log: "No recent activity found", time: "-", status: "bg-gray-300" }]).map((item, i) => (
                     <div key={i} className="flex items-start">
                       <div className={`w-2.5 h-2.5 rounded-full mt-1.5 mr-3 flex-shrink-0 ${item.status}`}></div>
                       <div>
@@ -169,7 +215,7 @@ const AdminDashboard = () => {
                   ))}
                 </div>
                 <button className="w-full mt-6 py-3 rounded-xl bg-[#F5F7F2] text-[#224D59] font-bold text-sm hover:bg-[#E8EFE9] transition-colors">
-                  View All Logs
+                  {`Status: Active ${statusBreakdown.Active ?? 0} | Converted ${statusBreakdown.Converted ?? 0}`}
                 </button>
               </motion.div>
 

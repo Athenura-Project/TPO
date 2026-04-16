@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AdminSidebar from '../../components/admin/Sidebar'; 
 import AdminHeader from '../../components/admin/Header';   
+import { uploadAdminBulkFile } from '../../api/adminApi';
 
 const BulkImportPage = () => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -14,6 +15,8 @@ const BulkImportPage = () => {
   // Progress States: 'idle' -> 'uploading' -> 'validating' -> 'success'
   const [uploadStatus, setUploadStatus] = useState('idle');
   const [progress, setProgress] = useState(0);
+  const [error, setError] = useState('');
+  const [importResult, setImportResult] = useState({ inserted: 0 });
 
   const fileInputRef = useRef(null);
 
@@ -41,39 +44,49 @@ const BulkImportPage = () => {
 
   const handleFileSelect = (e) => {
     const selectedFile = e.target.files[0];
-    if (selectedFile) setFile(selectedFile);
+    if (selectedFile) {
+      setError('');
+      setFile(selectedFile);
+    }
   };
 
-  // Simulate Upload & Validation Process
-  const startImport = () => {
+  const startImport = async () => {
     if (!file) return;
-    
+
+    setError('');
+    setImportResult({ inserted: 0 });
     setUploadStatus('uploading');
     setProgress(0);
 
-    // Simulate progress bar filling up
+    let current = 0;
     const interval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setUploadStatus('validating');
-          
-          // Simulate validation delay (checking duplicates, etc.)
-          setTimeout(() => {
-            setUploadStatus('success');
-          }, 1500);
-          
-          return 100;
-        }
-        return prev + 5;
-      });
-    }, 100);
+      current = Math.min(current + 10, 90);
+      setProgress(current);
+    }, 200);
+
+    try {
+      const result = await uploadAdminBulkFile(file);
+      clearInterval(interval);
+      setProgress(100);
+      setUploadStatus('validating');
+      setImportResult({ inserted: result?.inserted ?? 0 });
+      setTimeout(() => {
+        setUploadStatus('success');
+      }, 600);
+    } catch (err) {
+      clearInterval(interval);
+      setProgress(0);
+      setUploadStatus('idle');
+      setError(err.message || 'Upload failed');
+    }
   };
 
   const resetUpload = () => {
     setFile(null);
     setUploadStatus('idle');
     setProgress(0);
+    setError('');
+    setImportResult({ inserted: 0 });
   };
 
   // Animations
@@ -112,6 +125,12 @@ const BulkImportPage = () => {
               <h2 className="text-2xl font-extrabold text-[#224D59]">Bulk Data Import</h2>
               <p className="text-[#384022]/70 font-medium text-sm mt-1">Upload CSV or Excel sheets to rapidly add thousands of records.</p>
             </motion.div>
+
+            {error && (
+              <motion.div variants={itemVariants} className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                {error}
+              </motion.div>
+            )}
 
             {/* 🚀 MAIN UPLOAD CARD */}
             <motion.div variants={itemVariants} className="bg-white/80 backdrop-blur-xl border border-[#224D59]/10 rounded-3xl shadow-lg overflow-hidden relative">
@@ -221,7 +240,7 @@ const BulkImportPage = () => {
                             <div className="bg-white px-4 py-3 rounded-xl shadow-sm border border-green-100 flex justify-between items-center">
                               <div>
                                 <p className="text-[10px] uppercase font-bold text-gray-500">Valid Records</p>
-                                <p className="text-xl font-black text-green-600">342</p>
+                                <p className="text-xl font-black text-green-600">{importResult.inserted}</p>
                               </div>
                               <div className="w-8 h-8 bg-green-50 rounded-full flex items-center justify-center text-green-500">
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -229,8 +248,8 @@ const BulkImportPage = () => {
                             </div>
                             <div className="bg-white px-4 py-3 rounded-xl shadow-sm border border-orange-100 flex justify-between items-center">
                               <div>
-                                <p className="text-[10px] uppercase font-bold text-gray-500">Skipped (Duplicates)</p>
-                                <p className="text-xl font-black text-orange-500">12</p>
+                                <p className="text-[10px] uppercase font-bold text-gray-500">Skipped / Failed</p>
+                                <p className="text-xl font-black text-orange-500">N/A</p>
                               </div>
                               <div className="w-8 h-8 bg-orange-50 rounded-full flex items-center justify-center text-orange-500">
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
@@ -263,7 +282,6 @@ const BulkImportPage = () => {
                       </button>
                       <button 
                         onClick={() => {
-                          alert('Data Imported Successfully!');
                           resetUpload();
                         }} 
                         className="px-8 py-3 rounded-xl bg-[#B8CC34] text-[#224D59] font-extrabold text-sm hover:shadow-[0_0_20px_rgba(184,204,52,0.5)] transition-all transform hover:-translate-y-0.5"

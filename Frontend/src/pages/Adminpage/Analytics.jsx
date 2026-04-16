@@ -1,20 +1,41 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AdminSidebar from '../../components/admin/Sidebar'; 
 import AdminHeader from '../../components/admin/Header';   
+import { getAdminAnalytics } from '../../api/adminApi';
 
 const AnalyticsPage = () => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [analytics, setAnalytics] = useState(null);
+
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      setIsLoading(true);
+      setError('');
+      try {
+        const data = await getAdminAnalytics();
+        setAnalytics(data);
+      } catch (err) {
+        setError(err.message || 'Failed to fetch analytics');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAnalytics();
+  }, []);
 
   // ==========================================
   // 🚀 MOCK ANALYTICS DATA
   // ==========================================
   const summaryStats = [
-    { title: "Total Registered", value: "1,248", trend: "+12% this year", color: "bg-white", text: "text-[#224D59]" },
-    { title: "Total Placed", value: "842", trend: "67.4% Placement Rate", color: "bg-gradient-to-br from-[#224D59] to-[#1A3A43]", text: "text-white", badge: "bg-white/20 text-white" },
-    { title: "Partner Institutes", value: "45", trend: "+5 new this month", color: "bg-white", text: "text-[#224D59]" },
-    { title: "Average Package", value: "8.5 LPA", trend: "Up by 1.2 LPA", color: "bg-gradient-to-br from-[#B8CC34] to-[#8FA622]", text: "text-[#224D59]", badge: "bg-black/10 text-[#224D59]" }
+    { title: "Total Interns", value: analytics?.totalInterns ?? 0, trend: "Live", color: "bg-white", text: "text-[#224D59]" },
+    { title: "Converted TPOs", value: analytics?.convertedTPOs ?? 0, trend: `${analytics?.conversionRate ?? 0}% Conversion`, color: "bg-gradient-to-br from-[#224D59] to-[#1A3A43]", text: "text-white", badge: "bg-white/20 text-white" },
+    { title: "Total TPOs", value: analytics?.totalTPOs ?? 0, trend: "Live", color: "bg-white", text: "text-[#224D59]" },
+    { title: "Conversion Rate", value: `${analytics?.conversionRate ?? 0}%`, trend: "Live", color: "bg-gradient-to-br from-[#B8CC34] to-[#8FA622]", text: "text-[#224D59]", badge: "bg-black/10 text-[#224D59]" }
   ];
 
   const branchStats = [
@@ -132,7 +153,20 @@ const AnalyticsPage = () => {
               </button>
             </motion.div>
 
+            {error && (
+              <motion.div variants={itemVariants} className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                {error}
+              </motion.div>
+            )}
+
+            {isLoading && (
+              <motion.div variants={itemVariants} className="flex justify-center py-10">
+                <div className="w-10 h-10 border-4 border-[#B8CC34]/30 border-t-[#B8CC34] rounded-full animate-spin"></div>
+              </motion.div>
+            )}
+
             {/* 🚀 TOP SUMMARY CARDS */}
+            {!isLoading && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
               {summaryStats.map((stat, index) => (
                 <motion.div 
@@ -148,6 +182,7 @@ const AnalyticsPage = () => {
                 </motion.div>
               ))}
             </div>
+            )}
 
             {/* 🚀 CHARTS SECTION */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 pt-4">
