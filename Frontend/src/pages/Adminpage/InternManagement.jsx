@@ -1,20 +1,34 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AdminSidebar from '../../components/admin/Sidebar'; 
 import AdminHeader from '../../components/admin/Header';   
+import { getAdminInterns } from '../../api/adminApi';
 
 const InternsPage = () => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  // Dummy Data for Interns
-  const [interns, setInterns] = useState([
-    { id: 1, name: "Aarav Sharma", email: "aarav@example.com", branch: "B.Tech CSE", status: "Placed", tpo: "Google", date: "12 Apr 2026" },
-    { id: 2, name: "Priya Singh", email: "priya@example.com", branch: "MCA", status: "Active", tpo: "Microsoft", date: "10 Apr 2026" },
-    { id: 3, name: "Rohan Verma", email: "rohan.v@example.com", branch: "B.Tech IT", status: "Pending", tpo: "Unassigned", date: "09 Apr 2026" },
-    { id: 4, name: "Neha Gupta", email: "neha.g@example.com", branch: "B.Tech CSE", status: "Active", tpo: "Amazon", date: "08 Apr 2026" },
-  ]);
+  const [interns, setInterns] = useState([]);
+
+  useEffect(() => {
+    const fetchInterns = async () => {
+      setIsLoading(true);
+      setError('');
+      try {
+        const data = await getAdminInterns();
+        setInterns(data?.interns || []);
+      } catch (err) {
+        setError(err.message || 'Failed to fetch interns');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchInterns();
+  }, []);
 
   // Animation Variants
   const containerVariants = {
@@ -35,6 +49,22 @@ const InternsPage = () => {
       default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
   };
+
+  const normalizedInterns = interns.map((intern) => ({
+    id: intern?._id || intern?.id,
+    name: intern?.name || 'N/A',
+    email: intern?.email || 'N/A',
+    branch: intern?.branch || intern?.department || 'N/A',
+    status: intern?.status || 'Active',
+    tpo: intern?.tpo || intern?.assignedTPO?.companyName || 'Unassigned',
+  }));
+
+  const filteredInterns = normalizedInterns.filter((intern) =>
+    [intern.name, intern.email, intern.branch, intern.tpo]
+      .join(' ')
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="flex h-screen bg-[#F5F7F2] font-sans overflow-hidden selection:bg-[#B8CC34] selection:text-[#224D59]">
@@ -101,7 +131,20 @@ const InternsPage = () => {
               </div>
             </motion.div>
 
+            {error && (
+              <motion.div variants={itemVariants} className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                {error}
+              </motion.div>
+            )}
+
+            {isLoading && (
+              <motion.div variants={itemVariants} className="flex justify-center py-10">
+                <div className="w-10 h-10 border-4 border-[#B8CC34]/30 border-t-[#B8CC34] rounded-full animate-spin"></div>
+              </motion.div>
+            )}
+
             {/* Desktop Table View (Hidden on mobile) */}
+            {!isLoading && (
             <motion.div variants={itemVariants} className="hidden md:block bg-white/80 backdrop-blur-xl border border-[#224D59]/10 rounded-3xl shadow-sm overflow-hidden">
               <table className="w-full text-left border-collapse">
                 <thead>
@@ -114,7 +157,7 @@ const InternsPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#224D59]/5">
-                  {interns.map((intern) => (
+                  {filteredInterns.map((intern) => (
                     <tr key={intern.id} className="hover:bg-[#F5F7F2]/50 transition-colors group">
                       <td className="py-4 px-6">
                         <div className="flex items-center">
@@ -149,10 +192,11 @@ const InternsPage = () => {
                 </tbody>
               </table>
             </motion.div>
+            )}
 
             {/* Mobile Card View (Visible only on mobile) */}
             <div className="md:hidden space-y-4">
-              {interns.map((intern) => (
+              {!isLoading && filteredInterns.map((intern) => (
                 <motion.div key={intern.id} variants={itemVariants} className="bg-white/80 backdrop-blur-xl border border-[#224D59]/10 rounded-2xl p-4 shadow-sm relative">
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center">
