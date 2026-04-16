@@ -15,6 +15,7 @@ import AdminTpo from "./pages/Adminpage/Tpo";
 import AdminAllocation from "./pages/Adminpage/Allocation";
 import AdminAnalytics from "./pages/Adminpage/Analytics";
 import AdminBulk from "./pages/Adminpage/BulkImportPage";
+import TermsOfService from "./pages/TermsOfService";
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
           {/* Main Pages */}
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/terms-of-service" element={<TermsOfService />} />
           
           {/* 🚀 Admin Dashboard Route */}
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
