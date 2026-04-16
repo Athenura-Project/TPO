@@ -1,16 +1,23 @@
 import mongoose from "mongoose";
 
-const otpSchema = new mongoose.Schema({
-  name: String,
-  email: String,
-  password: String,
-  otp: String,
-  isVerified: {
-    type: Boolean,
-    default: false,
+const otpSchema = new mongoose.Schema(
+  {
+    email: {
+      type: String,
+      required: true,
+    },
+    otp: {
+      type: String,
+      required: true,
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
   },
-});
+  { timestamps: true }
+);
 
 const OTP = mongoose.model("OTP", otpSchema);
 
-export default OTP;   // ✅ VERY IMPORTANT
+export default OTP; // ✅ this fixes createdAt bug

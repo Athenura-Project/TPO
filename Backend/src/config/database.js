@@ -1,4 +1,7 @@
+import mongoose from "mongoose";
 import config from "./env.js";
+
+
 
 const connectDB = async () => {
   try {
@@ -6,10 +9,10 @@ const connectDB = async () => {
     setDefaultResultOrder("ipv4first");
     setServers(["8.8.8.8", "8.8.4.4"]);
 
-    const mongoose = (await import("mongoose")).default;
+    // const mongoose = (await import("mongoose")).default;
     await mongoose.connect(config.MONGO_URI);
 
-    console.log("MONGO_URL =", process.env.MONGO_URL);
+    console.log("Mongo URI loaded:", config.MONGO_URI ? "YES" : "NO");
 
     console.log("MongoDB Connected ✅");
   } catch (error) {
