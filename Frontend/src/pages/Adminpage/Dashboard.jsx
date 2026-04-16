@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { getAdminDashboardSummary } from '../../api/adminApi';
 
 // Importing our newly created Layout Components
@@ -7,6 +8,7 @@ import AdminSidebar from '../../components/admin/Sidebar'; // Adjust path if nee
 import AdminHeader from '../../components/admin/Header';   // Adjust path if needed
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   // Global states for Dashboard Layout
   const [activeTab, setActiveTab] = useState('Overview');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -22,14 +24,20 @@ const AdminDashboard = () => {
         const data = await getAdminDashboardSummary();
         setSummary(data);
       } catch (err) {
-        setError(err.message || 'Failed to load dashboard summary');
+        const message = err.message || 'Failed to load dashboard summary';
+        setError(message);
+        if (message.toLowerCase().includes('session') || message.toLowerCase().includes('token') || message.toLowerCase().includes('authorized')) {
+          setTimeout(() => {
+            navigate('/login');
+          }, 1200);
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchSummary();
-  }, []);
+  }, [navigate]);
 
   // Content Animation Variants
   const containerVariants = {
