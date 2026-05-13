@@ -1,5 +1,17 @@
 {
-    "compilerOptions": {
-      "forceConsistentCasingInFileNames": true
-    }
-  }
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["server.js", "src/**/*.js"],
+  "exclude": ["node_modules", "uploads"]
+}

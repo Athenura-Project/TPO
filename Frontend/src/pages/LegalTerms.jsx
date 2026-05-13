@@ -3,6 +3,7 @@ import { ArrowLeft, ChevronRight } from "lucide-react";
 import Navbar from "../components/LandingPage/Navbar";
 import Footer from "../components/LandingPage/Footer";
 import { useEffect, useRef, useState } from "react";
+import FadeInUp from "../components/FadeInUp";
 
 const sections = [
   {
@@ -256,7 +257,7 @@ const sections = [
   },
 ];
 
-const TermsOfService = () => {
+const LegalTerms = () => {
   const navigate = useNavigate();
   const [activeId, setActiveId] = useState("acceptance");
   const sectionRefs = useRef({});
@@ -280,27 +281,36 @@ const TermsOfService = () => {
     <div className="bg-[#F5F7F2] min-h-screen">
       <Navbar />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-20">
-        <button
-          onClick={() => navigate("/")}
-          className="flex items-center gap-1.5 text-sm text-[#384022]/60 hover:text-[#224D59] transition-colors duration-200 mb-8 group"
+        <a
+          href="/"
+          className="inline-flex items-center px-4 py-2 rounded-full bg-white border border-[#224D59]/10 text-sm font-bold text-[#224D59] hover:bg-[#F5F7F2] hover:border-[#B8CC34]/50 transition-all duration-300 mb-8 group shadow-sm"
         >
-          <ArrowLeft
-            size={14}
-            className="group-hover:-translate-x-0.5 cursor-pointer transition-transform duration-200"
-          />
+          <svg
+            className="w-4 h-4 mr-2 text-[#668824] transform group-hover:-translate-x-1 transition-transform"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2.5"
+              d="M10 19l-7-7m0 0l7-7m-7 7h18"
+            ></path>
+          </svg>
           Back to Home
-        </button>
-
-        <div className="mb-2">
-          <h1 className="text-4xl sm:text-5xl font-extrabold text-[#224D59] tracking-tight leading-tight mb-3">
-            Terms of Service
-          </h1>
-          <div className="flex items-center gap-3 text-xs text-[#384022]/50 font-medium">
-            <span>Effective: April 10, 2026</span>
-            <span className="w-1 h-1 rounded-full bg-[#384022]/30" />
-            <span>Updated: April 10, 2026</span>
+        </a>
+        <FadeInUp>
+          <div className="mb-2">
+            <h1 className="text-4xl text-center sm:text-5xl font-extrabold text-[#224D59] tracking-tight leading-tight mb-3">
+              Terms of Service
+            </h1>
+            <div className="flex items-center gap-3 text-xs text-[#384022]/50 font-medium flex justify-center">
+              <span className="w-1 h-1 rounded-full bg-[#384022]/30" />
+              <span>Updated: April 10, 2026</span>
+            </div>
           </div>
-        </div>
+        </FadeInUp>
 
         <div className="mt-10 flex gap-8 items-start">
           <aside className="hidden lg:block w-56 shrink-0 sticky top-24">
@@ -358,4 +368,4 @@ const TermsOfService = () => {
   );
 };
 
-export default TermsOfService;
+export default LegalTerms;

@@ -1,7 +1,7 @@
-import internsModels from "../models/interns.models.js";
+import internsModels from "../models/internsadmin.models.js";
 import { VerifyToken } from "../services/token.service.js";
 
-const auth = async (req, res, next) => {
+ export const auth = async (req, res, next) => {
     try {
         let token;
 
@@ -12,7 +12,7 @@ const auth = async (req, res, next) => {
             token = req.headers.authorization.split(" ")[1];
         }
 
-        // ❌ No token
+        //  No token
         if (!token) {
             return res.status(401).json({
                 success: false,
@@ -21,8 +21,9 @@ const auth = async (req, res, next) => {
         }
 
         const decoded = await VerifyToken(token);
+        const userId = decoded?.payload?.id || decoded?.id;
 
-        req.user = await internsModels.findById(decoded.id).select("-password");
+        req.user = await internsModels.findById(userId).select("-password");
 
         if (!req.user) {
             return res.status(401).json({
@@ -39,7 +40,7 @@ const auth = async (req, res, next) => {
     }
 }
 
-const adminOnly = (req, res, next) => {
+export const adminOnly = (req, res, next) => {
     if (req.user.role !== "admin") {
         return res.status(403).json({
             success: false,
@@ -49,4 +50,5 @@ const adminOnly = (req, res, next) => {
         next()
     }
 }
-export {auth, adminOnly}
+
+export default {auth, adminOnly}

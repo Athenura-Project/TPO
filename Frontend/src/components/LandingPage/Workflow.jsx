@@ -36,13 +36,11 @@ const Workflow = () => {
       badge: "01 / Setup",
       mockup: (
         <div className="w-full h-full flex flex-col items-center justify-center space-y-4">
-          {/* Lime/Olive dashed upload circle */}
           <div className="w-16 h-16 rounded-full bg-[#F5F7F2] border-2 border-dashed border-[#B8CC34]/60 flex items-center justify-center shadow-sm">
             <svg className="w-8 h-8 text-[#224D59]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
             </svg>
           </div>
-          {/* Glowing earthy gradient progress bar */}
           <div className="w-3/4 h-3 bg-[#E8EFE9] rounded-full overflow-hidden shadow-inner">
             <div className="w-2/3 h-full bg-gradient-to-r from-[#668824] to-[#B8CC34] animate-pulse"></div>
           </div>
@@ -56,17 +54,40 @@ const Workflow = () => {
       description: "Select multiple TPOs and assign them to specific interns with a single click. The system instantly notifies the intern about their newly allocated targets.",
       badge: "02 / Distribute",
       mockup: (
-        <div className="w-full h-full flex flex-col space-y-3 p-2">
-          {[1, 2, 3].map((item) => (
-            /* Light glass list items with hover effects */
-            <div key={item} className="w-full bg-[#F5F7F2] p-3 rounded-xl flex items-center justify-between shadow-sm border border-[#224D59]/5 transition-all hover:border-[#B8CC34]/40 hover:bg-white hover:shadow-md group">
-              <div className="flex items-center space-x-3">
-                <div className="w-4 h-4 rounded border border-[#224D59]/20 flex items-center justify-center bg-gradient-to-br from-[#224D59] to-[#668824] shadow-sm">
-                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
+        <div className="w-full h-full p-2 sm:p-4 flex flex-col justify-center space-y-3.5 bg-gradient-to-br from-[#F5F7F2]/40 to-transparent rounded-2xl">
+          {[
+            { text: "Assign Delhi Tech Univ. to Riya", active: true },
+            { text: "Verify BITS Pilani TPO details", active: false },
+            { text: "Distribute 50 new leads to Aman", active: false }
+          ].map((item, index) => (
+            /* Premium Card: Soft shadow, white background, elegant hover effect */
+            <div key={index} className="w-full bg-white rounded-xl p-3.5 flex items-center justify-between border border-[#224D59]/5 shadow-[0_2px_10px_rgba(34,77,89,0.03)] hover:shadow-[0_8px_25px_rgba(34,77,89,0.08)] hover:border-[#B8CC34]/30 transition-all duration-300 group cursor-pointer transform hover:-translate-y-0.5">
+              
+              <div className="flex items-center space-x-3.5 w-full">
+                {/* Left: Deep Green Checkbox (Matching Image) */}
+                <div className="w-[22px] h-[22px] rounded-[5px] bg-[#224D59] flex items-center justify-center shadow-sm flex-shrink-0 group-hover:bg-[#1A3A43] transition-colors">
+                  <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                  </svg>
                 </div>
-                <div className="w-24 h-2 bg-[#384022]/10 rounded group-hover:bg-[#384022]/20 transition-colors"></div>
+                
+                {/* Center: Premium Text + Subtle Line (Matching Image Layout) */}
+                <div className="flex flex-col w-full pr-2">
+                  <span className="text-[13px] font-extrabold text-[#224D59] truncate group-hover:text-[#668824] transition-colors">
+                    {item.text}
+                  </span>
+                  <div className="w-16 h-1.5 bg-[#F5F7F2] rounded-full mt-1.5 overflow-hidden">
+                    <div className="h-full bg-[#B8CC34]/40 w-0 group-hover:w-full transition-all duration-700 ease-out"></div>
+                  </div>
+                </div>
               </div>
-              <div className="w-8 h-8 rounded-full bg-[#384022]/5 border border-[#384022]/5"></div>
+
+              {/* Right: Light Grey Circle (Matching Image) */}
+              <div className="w-8 h-8 rounded-full bg-[#F5F7F2] border border-[#224D59]/5 flex items-center justify-center flex-shrink-0 group-hover:bg-[#B8CC34]/15 transition-colors duration-300">
+                {/* Optional tiny dot indicator inside circle for active state */}
+                <div className={`w-2 h-2 rounded-full transition-all duration-300 ${item.active ? 'bg-[#668824] shadow-[0_0_5px_#668824]' : 'bg-transparent group-hover:bg-[#224D59]/20'}`}></div>
+              </div>
+
             </div>
           ))}
         </div>
@@ -79,7 +100,6 @@ const Workflow = () => {
       badge: "03 / Execute",
       mockup: (
         <div className="w-full h-full flex items-center justify-center">
-          {/* Pristine white floating card with Lime/Teal accents */}
           <div className="w-[80%] bg-white rounded-2xl p-4 shadow-[0_15px_35px_rgba(34,77,89,0.08)] border border-[#224D59]/5 transform rotate-3 transition-transform hover:rotate-0 duration-300">
             <div className="flex items-center space-x-3 mb-4 border-b border-[#224D59]/5 pb-3">
               <div className="w-8 h-8 rounded-full bg-[#B8CC34]/20 border border-[#B8CC34]/40 flex items-center justify-center">
@@ -90,7 +110,6 @@ const Workflow = () => {
                 <div className="text-xs text-[#384022]/60 font-medium">Follow up required today</div>
               </div>
             </div>
-            {/* Dark Teal gradient button inside mockup */}
             <div className="w-full h-9 bg-gradient-to-r from-[#224D59] to-[#1A3A43] rounded-lg text-white flex items-center justify-center text-xs font-bold shadow-[0_4px_10px_rgba(34,77,89,0.2)] hover:shadow-[0_4px_15px_rgba(34,77,89,0.3)] transition-shadow cursor-pointer">Mark as Done</div>
           </div>
         </div>
@@ -103,7 +122,6 @@ const Workflow = () => {
       badge: "04 / Analyze",
       mockup: (
         <div className="w-full h-full flex items-end justify-between px-4 pb-2 space-x-3">
-          {/* Earthy elegant chart bars */}
           <div className="w-1/4 bg-gradient-to-t from-[#668824]/30 to-[#668824]/60 h-[40%] rounded-t-md"></div>
           <div className="w-1/4 bg-gradient-to-t from-[#B8CC34]/50 to-[#B8CC34]/80 h-[75%] rounded-t-md"></div>
           <div className="w-1/4 bg-gradient-to-t from-[#224D59]/80 to-[#224D59] h-[100%] rounded-t-md shadow-[0_0_20px_rgba(34,77,89,0.15)]"></div>
@@ -116,7 +134,7 @@ const Workflow = () => {
   return (
     <section id="workflow" className="w-full py-20 lg:py-32 bg-white relative overflow-hidden" ref={sectionRef}>
       
-      {/* Background Ambient Glows - very soft for light theme */}
+      {/* Background Ambient Glows */}
       <div className="absolute top-1/4 left-[-10%] w-96 h-96 bg-[#B8CC34]/10 rounded-full blur-[100px] pointer-events-none"></div>
       <div className="absolute bottom-1/4 right-[-10%] w-96 h-96 bg-[#224D59]/5 rounded-full blur-[100px] pointer-events-none"></div>
 
@@ -150,7 +168,7 @@ const Workflow = () => {
                 className={`workflow-step relative z-10 flex flex-col ${isEven ? 'lg:flex-row' : 'lg:flex-row-reverse'} items-center gap-8 lg:gap-16`}
               >
                 
-                {/* Timeline Node - White with Teal Border and Lime Pulse */}
+                {/* Timeline Node */}
                 <div className="hidden lg:flex absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white border-2 border-[#224D59]/30 items-center justify-center z-20 shadow-sm">
                   <div className="w-2.5 h-2.5 rounded-full bg-[#B8CC34] animate-pulse shadow-[0_0_8px_#B8CC34]"></div>
                 </div>

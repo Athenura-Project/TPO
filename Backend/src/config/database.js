@@ -12,7 +12,11 @@ const connectDB = async () => {
     // const mongoose = (await import("mongoose")).default;
     await mongoose.connect(config.MONGO_URI);
 
+    console.log("CONNECTED DB:", mongoose.connection.name);
+    console.log("CONNECTED HOST:", mongoose.connection.host);
+    
     console.log("Mongo URI loaded:", config.MONGO_URI ? "YES" : "NO");
+    console.log("Mongo URI:", process.env.MONGO_URI);
 
     console.log("MongoDB Connected ✅");
   } catch (error) {

@@ -28,7 +28,7 @@ const AdminDashboard = () => {
         setError(message);
         if (message.toLowerCase().includes('session') || message.toLowerCase().includes('token') || message.toLowerCase().includes('authorized')) {
           setTimeout(() => {
-            navigate('/login');
+            navigate('/');
           }, 1200);
         }
       } finally {
@@ -38,6 +38,44 @@ const AdminDashboard = () => {
 
     fetchSummary();
   }, [navigate]);
+
+  // 🚀 FEATURE 1: Export Report Logic (Generates and downloads a CSV file)
+  const handleExportReport = () => {
+    if (!summary) return; // Prevent export if data isn't loaded
+
+    // Create CSV content based on current dashboard data
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Category,Metric,Value\n";
+    
+    // Overview Stats
+    csvContent += `Overview,Total Interns,${summary.overview?.totalInterns || 0}\n`;
+    csvContent += `Overview,Total TPOs,${summary.overview?.totalTPOs || 0}\n`;
+    csvContent += `Overview,Converted TPOs,${summary.overview?.convertedTPOs || 0}\n`;
+    csvContent += `Overview,Conversion Rate,${summary.overview?.conversionRate || 0}%\n`;
+
+    // Status Breakdown
+    if (summary.statusBreakdown) {
+      Object.entries(summary.statusBreakdown).forEach(([status, count]) => {
+        csvContent += `Status Breakdown,${status},${count}\n`;
+      });
+    }
+
+    // Trigger Download
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    // Filename will be like Dashboard_Report_2023-10-27.csv
+    link.setAttribute("download", `Dashboard_Report_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // 🚀 FEATURE 2: Add New Lead Logic (Navigates to TPO page)
+  const handleAddNewLead = () => {
+    setActiveTab('TPOs'); // Update sidebar state
+    navigate('/admin/tpo'); // Redirect to TPO management page where leads are added
+  };
 
   // Content Animation Variants
   const containerVariants = {
@@ -137,10 +175,19 @@ const AdminDashboard = () => {
             <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <p className="text-[#384022]/70 font-medium">Here's what's happening with your placements today.</p>
               <div className="flex space-x-3 w-full sm:w-auto">
-                <button className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-white border border-[#224D59]/10 text-[#224D59] font-bold text-sm hover:bg-[#F5F7F2] transition-colors shadow-sm">
+                {/* Export Report Button connected to function */}
+                <button 
+                  onClick={handleExportReport}
+                  disabled={isLoading || !summary}
+                  className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-white border border-[#224D59]/10 text-[#224D59] font-bold text-sm hover:bg-[#F5F7F2] transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                   Export Report
                 </button>
-                <button className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-[#224D59] text-white font-bold text-sm hover:bg-[#1A3A43] shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5">
+                {/* Add New Lead Button connected to function */}
+                <button 
+                  onClick={handleAddNewLead}
+                  className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-[#224D59] text-white font-bold text-sm hover:bg-[#1A3A43] shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5"
+                >
                   + Add New Lead
                 </button>
               </div>
@@ -180,33 +227,81 @@ const AdminDashboard = () => {
             {/* Main Charts & Lists Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               
-              {/* Bar Chart Mockup (Consistent with Hero Section) */}
-              <motion.div variants={itemVariants} className="lg:col-span-2 bg-white/80 backdrop-blur-xl border border-[#224D59]/10 rounded-3xl p-6 shadow-sm flex flex-col min-h-[350px]">
-                <div className="flex justify-between items-center mb-8">
-                  <h3 className="text-lg font-extrabold text-[#224D59]">Weekly Outreach Volume</h3>
-                  <select className="bg-[#F5F7F2] border border-[#224D59]/10 text-[#224D59] text-xs font-bold rounded-lg px-3 py-1.5 outline-none cursor-pointer">
-                    <option>Last 7 Days</option>
-                    <option>This Month</option>
-                  </select>
+              {/* Performance Update (Weekly Dual-Bar Chart) */}
+              <motion.div variants={itemVariants} className="lg:col-span-2 bg-white/80 backdrop-blur-xl border border-[#224D59]/10 rounded-3xl p-6 shadow-sm flex flex-col min-h-[350px] relative overflow-hidden">
+                <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-[#B8CC34]/5 rounded-full blur-2xl"></div>
+                
+                <div className="flex justify-between items-center mb-8 relative z-10">
+                  <div>
+                    <h3 className="text-lg font-extrabold text-[#224D59]">Performance Update</h3>
+                    <p className="text-xs font-medium text-[#384022]/60 mt-1">Weekly comparison of TPOs added vs converted.</p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full bg-[#224D59]"></div>
+                      <span className="text-[10px] font-bold text-[#224D59]">Added</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full bg-[#B8CC34]"></div>
+                      <span className="text-[10px] font-bold text-[#224D59]">Converted</span>
+                    </div>
+                  </div>
                 </div>
                 
-                {/* Animated Bars */}
-                <div className="flex-1 flex items-end justify-between space-x-2 sm:space-x-6 pt-4 border-b border-[#224D59]/5 pb-2">
-                  {[40, 70, 45, 90, 60, 85, 30].map((height, i) => (
-                    <div key={i} className="w-full flex flex-col items-center group h-full justify-end">
-                      <motion.div 
-                        initial={{ height: 0 }} 
-                        animate={{ height: `${height}%` }} 
-                        transition={{ duration: 1, delay: i * 0.1, ease: "easeOut" }}
-                        className={`w-full rounded-t-xl transition-all duration-300 group-hover:opacity-100 ${i === 3 ? 'bg-[#224D59] shadow-lg' : 'bg-gradient-to-t from-[#668824] to-[#B8CC34] opacity-70'}`}
-                      ></motion.div>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex justify-between mt-3 text-[10px] sm:text-xs font-bold text-[#384022]/50 px-1 sm:px-2">
-                  <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+                {/* Animated Dual Bar Chart */}
+                <div className="flex-1 flex items-stretch justify-between gap-2 sm:gap-4 pt-4 border-b border-[#224D59]/5 pb-2 relative z-10 h-64 px-2">
+                  {(() => {
+                    const weeklyData = summary?.weeklyData;
+                    const labels = weeklyData?.labels || ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+                    const addedData = weeklyData?.added || new Array(7).fill(0);
+                    const convertedData = weeklyData?.converted || new Array(7).fill(0);
+                    const maxVal = Math.max(...addedData, ...convertedData, 1);
+
+                    return labels.map((day, i) => {
+                      const addedVal = addedData[i];
+                      const convertedVal = convertedData[i];
+                      const addedHeight = (addedVal / maxVal) * 100;
+                      const convertedHeight = (convertedVal / maxVal) * 100;
+
+                      return (
+                        <div key={i} className="flex-1 flex flex-col items-center group min-w-[30px]">
+                          <div className="flex-1 w-full flex items-end justify-center gap-1">
+                            {/* Added Bar */}
+                            <div className="relative flex-1 h-full flex flex-col justify-end group/added">
+                              {addedVal > 0 && (
+                                <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-[#224D59] text-white text-[9px] font-bold px-2 py-1 rounded shadow-lg z-30 whitespace-nowrap opacity-0 group-hover/added:opacity-100 transition-opacity">
+                                  {addedVal} Added
+                                </div>
+                              )}
+                              <motion.div 
+                                initial={{ height: 0 }}
+                                animate={{ height: `${addedHeight}%` }}
+                                className="w-full bg-[#224D59] rounded-t-sm min-h-[2px]"
+                              />
+                            </div>
+
+                            {/* Converted Bar */}
+                            <div className="relative flex-1 h-full flex flex-col justify-end group/converted">
+                              {convertedVal > 0 && (
+                                <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-[#B8CC34] text-[#224D59] text-[9px] font-bold px-2 py-1 rounded shadow-lg z-30 whitespace-nowrap opacity-0 group-hover/converted:opacity-100 transition-opacity">
+                                  {convertedVal} Conv.
+                                </div>
+                              )}
+                              <motion.div 
+                                initial={{ height: 0 }}
+                                animate={{ height: `${convertedHeight}%` }}
+                                className="w-full bg-[#B8CC34] rounded-t-sm min-h-[2px]"
+                              />
+                            </div>
+                          </div>
+                          <span className="mt-4 text-[10px] font-black text-[#224D59]/40 uppercase">{day}</span>
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               </motion.div>
+
 
               {/* Recent Activity List */}
               <motion.div variants={itemVariants} className="bg-white/80 backdrop-blur-xl border border-[#224D59]/10 rounded-3xl p-6 shadow-sm flex flex-col">

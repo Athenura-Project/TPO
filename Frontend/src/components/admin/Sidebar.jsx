@@ -13,6 +13,7 @@ const AdminSidebar = () => {
       return null;
     }
   });
+
   const initials = useMemo(() => {
     const name = currentUser?.name || "Admin";
     const parts = name.trim().split(/\s+/).slice(0, 2);
@@ -37,9 +38,15 @@ const AdminSidebar = () => {
 
   // 🚀 Logout Function: Storage clear karega aur login pe bhej dega
   const handleLogout = () => {
-    localStorage.clear();
+    localStorage.removeItem("token");
+    localStorage.removeItem("currentUser");
+    localStorage.removeItem("user");
+  
     sessionStorage.clear();
-    navigate('/login');
+  
+    navigate("/", { replace: true });
+  
+    window.location.reload();
   };
 
   const menuItems = [
@@ -118,26 +125,25 @@ const AdminSidebar = () => {
             </Link>
           );
         })}
-
-        <div className="mt-8 mb-4 px-4 text-xs font-bold text-white/40 uppercase tracking-widest text-left">Data Actions</div>
-        
-        {/* 🚀 Bulk Import Link Added Here */}
-        <Link 
-          to="/admin/bulk/import"
-          className="w-full flex items-center px-4 py-3.5 rounded-xl transition-all duration-300 text-sm font-bold border border-dashed border-white/20 text-white/80 hover:bg-white/5 hover:border-[#B8CC34]/50 hover:text-[#B8CC34] group"
-        >
-          <div className="w-5 h-5 mr-3 text-white/40 group-hover:text-[#B8CC34] transition-colors text-left">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-full h-full">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-            </svg>
-          </div>
-          <span className="flex-1 text-left">Bulk Import (CSV/XLSX)</span>
-        </Link>
       </nav>
 
-      {/* 🚀 Bottom Profile Section with Functional Logout */}
-      <div className="p-4 border-t border-white/10 bg-black/10 relative z-10">
-        <div className="flex items-center justify-between p-3 rounded-xl">
+      {/* 🚀 Bottom Section: Back to Home & Profile */}
+      <div className="p-4 border-t border-white/10 bg-black/10 relative z-10 flex flex-col gap-2">
+        
+        {/* 🔥 NEW: Back to Home Button with Home Icon 🔥 */}
+        <Link 
+          to="/" 
+          className="w-full flex items-center justify-center px-4 py-2.5 rounded-xl transition-all duration-300 text-sm font-bold bg-white/5 text-white/80 hover:bg-[#B8CC34]/20 hover:text-[#B8CC34] group"
+        >
+          {/* Replaced old arrow icon with Home icon */}
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+          Back to Home
+        </Link>
+
+        {/* Profile Details & Logout */}
+        <div className="flex items-center justify-between p-2 rounded-xl">
           <div className="flex items-center">
             <img 
               src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(initials)}`} 
@@ -160,6 +166,7 @@ const AdminSidebar = () => {
             </svg>
           </button>
         </div>
+
       </div>
       
     </aside>
@@ -167,5 +174,3 @@ const AdminSidebar = () => {
 };
 
 export default AdminSidebar;
-
-

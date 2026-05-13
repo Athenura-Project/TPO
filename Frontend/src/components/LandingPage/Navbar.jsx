@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { LogIn, LogOut } from "lucide-react";
+import UserLogin from "../../pages/auth/UserLogin";
 
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [token, setToken] = useState(localStorage.getItem("token"));
   const [loggingOut, setLoggingOut] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false); 
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -34,7 +36,6 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // ✅ Re-sync token on every route change
   useEffect(() => {
     setToken(localStorage.getItem("token"));
   }, [location.pathname]);
@@ -44,7 +45,7 @@ const Navbar = () => {
     { label: "About", path: "/about" },
     { label: "Contact", path: "/contact" },
     { label: "FAQ", path: "/faq" },
-    { label: "Dashboard", path: "/dashboard" },
+    ...(token ? [{ label: "Dashboard", path: "/dashboard" }] : []),
   ];
 
   return (
@@ -85,7 +86,6 @@ const Navbar = () => {
         .btn-login:hover::before { opacity: 1; }
         .btn-login:active { transform: scale(0.97); }
         .btn-login > * { position: relative; z-index: 1; }
-        /* shimmer sweep */
         .btn-login::after {
           content: '';
           position: absolute;
@@ -126,7 +126,6 @@ const Navbar = () => {
           box-shadow: 0 10px 26px rgba(220,38,38,0.42);
         }
         .btn-logout:active { transform: scale(0.97); }
-        /* icon spin on logout */
         .btn-logout.logging-out .logout-icon {
           animation: spin-out 0.6s ease forwards;
         }
@@ -182,6 +181,9 @@ const Navbar = () => {
         }
       `}</style>
 
+      {/* ← NEW: Modal rendered here, outside nav flow */}
+      <UserLogin isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+
       <div className="fixed top-0 left-0 w-full z-50 flex justify-center pointer-events-none pt-4 sm:pt-6">
         <nav
           className={`relative pointer-events-auto transition-all duration-500 ease-out bg-white ${
@@ -192,11 +194,17 @@ const Navbar = () => {
         >
           <div className="px-5 sm:px-8 py-3">
             <div className="flex justify-between items-center h-12">
-
               {/* Logo */}
-              <div className="flex-shrink-0 flex items-center">
-                <a href="/" className="transform transition-transform duration-300 hover:scale-105">
-                  <img src="/Logo.png" alt="Athenura Logo" className="h-8 sm:h-10 w-auto object-contain" />
+              <div className="shrink-0 flex items-center">
+                <a
+                  href="/"
+                  className="transform transition-transform duration-300 hover:scale-105"
+                >
+                  <img
+                    src="/Logo.png"
+                    alt="Athenura Logo"
+                    className="h-8 sm:h-10 w-auto object-contain"
+                  />
                 </a>
               </div>
 
@@ -210,10 +218,18 @@ const Navbar = () => {
                       to={item.path}
                       className="relative group font-semibold text-sm transition-colors duration-300"
                     >
-                      <span className={isActive ? "text-[#224D59]" : "text-[#384022]/70 group-hover:text-[#224D59] transition-colors duration-300"}>
+                      <span
+                        className={
+                          isActive
+                            ? "text-[#224D59]"
+                            : "text-[#384022]/70 group-hover:text-[#224D59] transition-colors duration-300"
+                        }
+                      >
                         {item.label}
                       </span>
-                      <span className={`absolute -bottom-1 left-0 w-full h-[2px] bg-[#224D59] transition-transform duration-300 ease-out origin-left ${isActive ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"}`} />
+                      <span
+                        className={`absolute -bottom-1 left-0 w-full h-0.5 bg-[#224D59] transition-transform duration-300 ease-out origin-left ${isActive ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"}`}
+                      />
                     </Link>
                   );
                 })}
@@ -222,20 +238,26 @@ const Navbar = () => {
               {/* Desktop Auth Button */}
               <div className="hidden md:flex items-center">
                 {token ? (
-                  // ✅ LOGGED IN → red ghost button that fills on hover
                   <button
                     onClick={handleLogout}
                     className={`btn-logout ${loggingOut ? "logging-out" : ""}`}
                   >
-                    <LogOut size={14} strokeWidth={2.5} className="logout-icon" />
+                    <LogOut
+                      size={14}
+                      strokeWidth={2.5}
+                      className="logout-icon"
+                    />
                     <span>{loggingOut ? "Signing out…" : "Logout"}</span>
                   </button>
                 ) : (
-                  // ✅ NOT LOGGED IN → teal gradient + shimmer login button
-                  <a href="/login" className="btn-login">
+                  // ← CHANGED: was <a href="/login">, now opens modal
+                  <button
+                    onClick={() => setIsLoginOpen(true)}
+                    className="btn-login"
+                  >
                     <LogIn size={14} strokeWidth={2.5} />
                     <span>Login</span>
-                  </a>
+                  </button>
                 )}
               </div>
 
@@ -248,11 +270,33 @@ const Navbar = () => {
                 >
                   <span className="sr-only">Open main menu</span>
                   <div className="relative w-6 h-6">
-                    <svg className={`absolute top-0 left-0 w-6 h-6 transition-transform duration-300 ${isMobileMenuOpen ? "rotate-90 opacity-0 scale-50" : "rotate-0 opacity-100 scale-100"}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                    <svg
+                      className={`absolute top-0 left-0 w-6 h-6 transition-transform duration-300 ${isMobileMenuOpen ? "rotate-90 opacity-0 scale-50" : "rotate-0 opacity-100 scale-100"}`}
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M4 6h16M4 12h16M4 18h16"
+                      />
                     </svg>
-                    <svg className={`absolute top-0 left-0 w-6 h-6 transition-transform duration-300 ${isMobileMenuOpen ? "rotate-0 opacity-100 scale-100 text-[#224D59]" : "-rotate-90 opacity-0 scale-50"}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    <svg
+                      className={`absolute top-0 left-0 w-6 h-6 transition-transform duration-300 ${isMobileMenuOpen ? "rotate-0 opacity-100 scale-100 text-[#224D59]" : "-rotate-90 opacity-0 scale-50"}`}
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M6 18L18 6M6 6l12 12"
+                      />
                     </svg>
                   </div>
                 </button>
@@ -261,7 +305,9 @@ const Navbar = () => {
           </div>
 
           {/* Mobile Dropdown */}
-          <div className={`absolute top-full left-0 w-full mt-3 rounded-2xl overflow-hidden transition-all duration-300 ease-in-out origin-top border border-gray-200 shadow-[0_20px_40px_rgb(0,0,0,0.1)] bg-white/95 backdrop-blur-2xl ${isMobileMenuOpen ? "scale-y-100 opacity-100 visible" : "scale-y-0 opacity-0 invisible"}`}>
+          <div
+            className={`absolute top-full left-0 w-full mt-3 rounded-2xl overflow-hidden transition-all duration-300 ease-in-out origin-top border border-gray-200 shadow-[0_20px_40px_rgb(0,0,0,0.1)] bg-white/95 backdrop-blur-2xl ${isMobileMenuOpen ? "scale-y-100 opacity-100 visible" : "scale-y-0 opacity-0 invisible"}`}
+          >
             <div className="px-4 py-6 space-y-2">
               {navLinks.map((item) => (
                 <Link
@@ -281,10 +327,17 @@ const Navbar = () => {
                     {loggingOut ? "Signing out…" : "Logout"}
                   </button>
                 ) : (
-                  <a href="/login" className="btn-login-mobile">
+                  // ← CHANGED: was <a href="/login">, now opens modal
+                  <button
+                    onClick={() => {
+                      setIsLoginOpen(true);
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="btn-login-mobile"
+                  >
                     <LogIn size={16} strokeWidth={2.5} />
                     Login
-                  </a>
+                  </button>
                 )}
               </div>
             </div>

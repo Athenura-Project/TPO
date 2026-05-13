@@ -7,16 +7,16 @@ export const sendOTPEmail = async (email, otp) => {
       "https://api.brevo.com/v3/smtp/email",
       {
         sender: {
-          name: "Athenura",
-          email: process.env.SENDER_EMAIL,
+          name: "Athenura TPO",
+          email: process.env.SENDER_EMAIL 
         },
-        to: [
-          {
-            email: email,
-          },
-        ],
+        to: [{ email }],
         subject: "OTP Verification",
-        htmlContent: otpTemplate(otp), // ✅ ONLY THIS
+        htmlContent: otpTemplate(otp),
+
+        replyTo: {
+          email: process.env.SENDER_EMAIL
+        }
       },
       {
         headers: {
@@ -26,7 +26,13 @@ export const sendOTPEmail = async (email, otp) => {
       }
     );
 
-    console.log("✅ OTP Email Sent");
+    console.log("✅ EMAIL SENT:", {
+      messageId: response.data.messageId,
+      email
+    });
+
+    console.log("BREVO RESPONSE FULL:", JSON.stringify(response.data, null, 2));
+    
     return response.data;
 
   } catch (error) {

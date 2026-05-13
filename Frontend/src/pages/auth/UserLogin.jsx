@@ -1,21 +1,20 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate, Navigate } from "react-router-dom";
 import {
-  ArrowLeft,
-  Calendar,
-  ChartLine,
+  X,
   Lock,
-  Shield,
   UserPlus,
-  Users,
   Mail,
   KeyRound,
   RotateCcw,
+  Eye,
+  EyeOff,
+  ArrowLeft,
+  User,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 
-const BASE = "http://localhost:5000/auth";
-
-// ─── Reusable Components ───────────────────────────────────────────────────
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+const BASE = `${API_BASE_URL}/auth`;
 
 const FloatingInput = ({
   id,
@@ -50,17 +49,48 @@ const FloatingInput = ({
   </div>
 );
 
-const FeatureItem = ({ Icon, title, desc, color }) => (
-  <div className="flex items-center gap-4">
-    <div className={`${color} p-2.5 rounded-xl text-white shrink-0`}>
-      <Icon size={18} />
+const PasswordInput = ({
+  id,
+  label,
+  value,
+  onChange,
+  autoComplete = "current-password",
+  required = true,
+}) => {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative pt-5">
+      <input
+        id={id}
+        type={show ? "text" : "password"}
+        placeholder=" "
+        value={value}
+        onChange={onChange}
+        autoComplete={autoComplete}
+        required={required}
+        className="peer border-b-2 border-gray-200 w-full pb-2 pr-8 focus:outline-none focus:border-[#0d9488] transition-colors duration-300 bg-transparent text-sm text-[#384022] autofill:shadow-[inset_0_0_0px_1000px_transparent] autofill:[-webkit-text-fill-color:inherit]"
+      />
+      <label
+        htmlFor={id}
+        className="absolute left-0 top-5 text-gray-400 text-sm tracking-wide transition-all duration-300 pointer-events-none peer-focus:top-0 peer-focus:text-xs peer-focus:text-[#0d9488] peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-[#0d9488]"
+      >
+        {label}
+      </label>
+      <button
+        type="button"
+        onClick={() => setShow((p) => !p)}
+        tabIndex={-1}
+        className="absolute right-0 bottom-2.5 text-gray-400 hover:text-[#0d9488] transition-colors duration-200 focus:outline-none cursor-pointer"
+      >
+        {show ? (
+          <EyeOff size={15} strokeWidth={1.8} />
+        ) : (
+          <Eye size={15} strokeWidth={1.8} />
+        )}
+      </button>
     </div>
-    <div>
-      <h4 className="text-white font-semibold text-sm">{title}</h4>
-      <p className="text-white/60 text-xs mt-0.5 leading-relaxed">{desc}</p>
-    </div>
-  </div>
-);
+  );
+};
 
 const ErrorMessage = ({ message }) => (
   <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2.5 rounded-xl text-sm mb-4">
@@ -69,8 +99,8 @@ const ErrorMessage = ({ message }) => (
 );
 
 const SuccessMessage = ({ message }) => (
-  <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-2.5 rounded-xl text-sm mb-4 flex items-center gap-2">
-    <span className="text-green-500">✓</span> {message}
+  <div className="bg-[#e1f5ee] border border-[#0d9488]/20 text-[#085041] px-4 py-2.5 rounded-xl text-sm mb-4 flex items-center gap-2">
+    <span className="text-[#0d9488]">✓</span> {message}
   </div>
 );
 
@@ -78,9 +108,7 @@ const SubmitButton = ({ loading, label, loadingLabel, icon: Icon }) => (
   <button
     type="submit"
     disabled={loading}
-    className="bg-[#224D59] py-3 cursor-pointer w-full text-white font-semibold text-sm rounded-xl flex gap-2 items-center justify-center
-      hover:-translate-y-0.5 hover:shadow-[0_10px_25px_rgba(34,77,89,0.3)] hover:bg-[#1A3A43]
-      active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+    className="bg-[#224D59] py-3 cursor-pointer w-full text-white font-semibold text-sm rounded-xl flex gap-2 items-center justify-center hover:-translate-y-0.5 hover:shadow-[0_10px_25px_rgba(34,77,89,0.3)] hover:bg-[#1A3A43] active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
   >
     {loading ? (
       loadingLabel
@@ -93,7 +121,6 @@ const SubmitButton = ({ loading, label, loadingLabel, icon: Icon }) => (
   </button>
 );
 
-// ─── Step indicator for forgot password flow ──────────────────────────────
 const StepDots = ({ current }) => (
   <div className="flex items-center gap-2 mb-6">
     {[1, 2].map((s) => (
@@ -106,9 +133,7 @@ const StepDots = ({ current }) => (
   </div>
 );
 
-// ══════════════════════════════════════════════════════════════════════════
-const UserLogin = () => {
-  // ── shared state ──
+const UserLogin = ({ isOpen, onClose }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -118,33 +143,20 @@ const UserLogin = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
-
-  // ── view: "login" | "register" | "forgot" ──
   const [view, setView] = useState("login");
-
-  // ── forgot password specific ──
   const [fpEmail, setFpEmail] = useState("");
   const [fpOtp, setFpOtp] = useState("");
   const [fpNewPassword, setFpNewPassword] = useState("");
   const [fpConfirm, setFpConfirm] = useState("");
-  const [fpOtpSent, setFpOtpSent] = useState(false); // step 1 done
-
+  const [fpOtpSent, setFpOtpSent] = useState(false);
   const navigate = useNavigate();
-
-  // redirect if already logged in
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    const role = localStorage.getItem("role");
-    if (token && role) {
-      navigate(role === "admin" ? "/admin/dashboard" : "/intern/dashboard");
-    }
-  }, []);
 
   const clearError = (setter) => (e) => {
     setError("");
     setter(e.target.value);
   };
-  const switchView = (v) => {
+
+  const switchView = useCallback((v) => {
     setView(v);
     setError("");
     setSuccess("");
@@ -153,11 +165,43 @@ const UserLogin = () => {
     setFpOtp("");
     setFpNewPassword("");
     setFpConfirm("");
-  };
+  }, []);
 
-  // ── LOGIN ──────────────────────────────────────────────────────────────
+  const handleClose = useCallback(() => {
+    onClose();
+    setTimeout(() => {
+      switchView("login");
+      setEmail("");
+      setPassword("");
+    }, 300);
+  }, [onClose, switchView]);
+
+
+
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") handleClose();
+    };
+    if (isOpen) document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [isOpen, handleClose]);
+
+  useEffect(() => {
+    document.body.style.overflow = isOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
   const handleLogin = async (e) => {
     e.preventDefault();
+
+
+    
+    if (loading) return; 
+
+
     setError("");
     setLoading(true);
     try {
@@ -170,20 +214,20 @@ const UserLogin = () => {
       if (res.ok) {
         localStorage.setItem("token", data.token);
         localStorage.setItem("role", data.user.role);
+        handleClose();
         navigate(
-          data.user.role === "admin" ? "/admin/dashboard" : "/intern/dashboard",
+          data.user.role === "admin" ? "/admin/dashboard" : "/intern/dashboard"
         );
       } else {
         setError(data.message || "Login failed");
       }
     } catch {
-      setError("Cannot connect to server. Is the backend running?");
+      setError("Cannot connect to server.");
     } finally {
       setLoading(false);
     }
   };
 
-  // ── REGISTER (send OTP) ────────────────────────────────────────────────
   const handleSendOTP = async (e) => {
     e.preventDefault();
     setError("");
@@ -207,7 +251,6 @@ const UserLogin = () => {
     }
   };
 
-  // ── REGISTER (verify OTP) ─────────────────────────────────────────────
   const handleVerifyOTP = async (e) => {
     e.preventDefault();
     setError("");
@@ -222,7 +265,8 @@ const UserLogin = () => {
       if (res.ok) {
         localStorage.setItem("token", data.token);
         localStorage.setItem("role", data.user.role);
-        navigate("/admin/dashboard");
+        handleClose();
+        navigate("/admin/dashboard", { replace: true });
       } else {
         setError(data.message || "Verification failed");
       }
@@ -233,9 +277,8 @@ const UserLogin = () => {
     }
   };
 
-  // ── FORGOT PASSWORD — Step 1: send OTP ───────────────────────────────
   const handleForgotSendOTP = async (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     setError("");
     setSuccess("");
     setLoading(true);
@@ -259,7 +302,6 @@ const UserLogin = () => {
     }
   };
 
-  // ── FORGOT PASSWORD — Step 2: verify OTP + reset password ────────────
   const handleResetPassword = async (e) => {
     e.preventDefault();
     setError("");
@@ -285,7 +327,7 @@ const UserLogin = () => {
       });
       const data = await res.json();
       if (res.ok) {
-        setSuccess("Password reset successful! Redirecting to login…");
+        setSuccess("Password reset! Redirecting to login…");
         setTimeout(() => switchView("login"), 2000);
       } else {
         setError(data.message || "Reset failed. Check your OTP.");
@@ -297,130 +339,109 @@ const UserLogin = () => {
     }
   };
 
-  // ══════════════════════════════════════════════════════════════════════
-  return (
-    <div className="flex justify-center min-h-screen">
-      {/* ── Left panel ── */}
-      <div className="hidden lg:block lg:w-3/5 h-screen sticky top-0">
-        <img
-          src="https://res.cloudinary.com/drq2a0262/image/upload/q_auto/f_auto/v1775484772/login-image_liqmh5.webp"
-          alt="login-image"
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-[#224D59]/80 flex flex-col justify-center px-12 gap-4">
-          <div className="mb-4">
-            <img
-              src="/Logo.png"
-              alt="Athenura Logo"
-              className="h-10 w-auto object-contain brightness-0 invert mb-6"
-            />
-            <h1 className="text-4xl font-extrabold text-white leading-tight tracking-tight">
-              TPO Generation
-              <br />
-              and Management
-            </h1>
-            <p className="text-white/70 mt-3 text-sm leading-relaxed max-w-sm">
-              Streamline your Training & Placement Opportunity pipeline with
-              role-based dashboards and automated workflows.
-            </p>
-          </div>
-          <div className="flex flex-col gap-5 mt-4">
-            <FeatureItem
-              Icon={ChartLine}
-              title="Real Time Analytics"
-              desc="Live dashboards with conversion rates & intern rankings."
-              color="bg-amber-500"
-            />
-            <FeatureItem
-              Icon={Users}
-              title="Role-based Access"
-              desc="Separate intern & admin dashboards with JWT auth."
-              color="bg-[#0d9488]"
-            />
-            <FeatureItem
-              Icon={Shield}
-              title="Enterprise Security"
-              desc="bcrypt hashing, Helmet.js & rate limiting built-in."
-              color="bg-purple-600"
-            />
-            <FeatureItem
-              Icon={Calendar}
-              title="Smart Automation"
-              desc="node-cron follow-up reminders & bulk CSV/XLSX import."
-              color="bg-pink-500"
-            />
-          </div>
-        </div>
-      </div>
+  if (!isOpen) return null;
 
-      {/* ── Right panel ── */}
-      <div className="flex-1 flex flex-col justify-center px-6 sm:px-12 lg:px-16 xl:px-24 py-12 min-h-screen">
-        <div className="max-w-sm w-full mx-auto">
-          {/* Header */}
-          <div className="flex justify-between items-center mb-8">
-            <img
-              src="/Logo.png"
-              alt="Athenura Logo"
-              className="h-10 w-auto object-contain"
-            />
+  const titles = {
+    login: {
+      h: "Welcome Back",
+      p: "Sign in to track your internships and upcoming opportunities.",
+    },
+    register: {
+      h: otpSent ? "Verify Your Email" : "Create Admin Account",
+      p: otpSent
+        ? `Enter the 6-digit code sent to ${email}`
+        : "Register as an administrator to manage interns and oversee platform activities.",
+    },
+    forgot: {
+      h: fpOtpSent ? "Reset Your Password" : "Forgot Password?",
+      p: fpOtpSent
+        ? "Enter the OTP and choose a new password."
+        : "Enter your registered email and we'll send you a reset code.",
+    },
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center pt-30 p-4"
+      style={{
+        backgroundColor: "rgba(0,0,0,0.5)",
+        backdropFilter: "blur(4px)",
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) handleClose();
+      }}
+    >
+      <div
+        className="bg-white w-full max-w-md rounded-2xl shadow-2xl relative flex flex-col max-h-[75vh] overflow-y-auto"
+        style={{ animation: "modalIn 0.25s cubic-bezier(0.22,1,0.36,1)" }}
+      >
+        <style>{`@keyframes modalIn { from { opacity: 0; transform: scale(0.95) translateY(12px); } to { opacity: 1; transform: scale(1) translateY(0); } }`}</style>
+
+        <div className="flex items-center justify-between px-7 pt-6 pb-2 shrink-0">
+          <img
+            src="/Logo.png"
+            alt="Athenura"
+            className="h-8 w-auto object-contain"
+          />
+          <div className="flex items-center gap-2">
+            {view !== "login" && (
+              <button
+                onClick={() => switchView("login")}
+                className="flex items-center gap-1 text-xs text-[#384022]/50 hover:text-[#224D59] transition-colors duration-200 cursor-pointer mr-1"
+              >
+                <ArrowLeft size={13} /> Login
+              </button>
+            )}
             <button
-              onClick={() =>
-                view !== "login" ? switchView("login") : navigate("/")
-              }
-              className="cursor-pointer flex items-center gap-2 border border-gray-200 px-3.5 py-2 rounded-xl text-sm text-gray-500 hover:border-[#224D59] hover:text-[#224D59] hover:-translate-y-0.5 active:scale-95 duration-200 transition-all group"
+              onClick={handleClose}
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-400 hover:text-[#224D59] hover:bg-gray-100 transition-all duration-200 cursor-pointer"
             >
-              <ArrowLeft
-                size={15}
-                className="group-hover:-translate-x-1 duration-200 transition-transform"
-              />
-              {view !== "login" ? "Back to Login" : "Back"}
+              <X size={17} strokeWidth={2} />
             </button>
           </div>
+        </div>
 
-          {/* ════════════ LOGIN VIEW ════════════ */}
+        <div className="px-7 pt-4 pb-7">
+          <div className="mb-6">
+            <h2 className="text-xl font-extrabold text-[#224D59] tracking-tight mb-1">
+              {titles[view].h}
+            </h2>
+            <p className="text-[#384022]/60 text-xs leading-relaxed">
+              {titles[view].p}
+            </p>
+          </div>
+
+          {view === "forgot" && <StepDots current={fpOtpSent ? 2 : 1} />}
+          {error && <ErrorMessage message={error} />}
+          {success && <SuccessMessage message={success} />}
+
           {view === "login" && (
             <>
-              <div className="mb-8">
-                <h1 className="text-2xl font-extrabold text-[#224D59] tracking-tight mb-2">
-                  Access Your Placement Journey
-                </h1>
-                <p className="text-[#384022]/60 text-sm leading-relaxed">
-                  Sign in to track your internships, training progress, and
-                  upcoming opportunities.
-                </p>
-              </div>
-
-              {error && <ErrorMessage message={error} />}
-
-              <form onSubmit={handleLogin} className="flex flex-col gap-6">
+              <form onSubmit={handleLogin} className="flex flex-col gap-5">
                 <FloatingInput
-                  id="email"
+                  id="m-email"
                   type="email"
                   label="Email address"
                   value={email}
                   onChange={clearError(setEmail)}
                   autoComplete="email"
                 />
-                <FloatingInput
-                  id="password"
-                  type="password"
+                <PasswordInput
+                  id="m-password"
                   label="Password"
                   value={password}
                   onChange={clearError(setPassword)}
                   autoComplete="current-password"
                 />
-
-                {/* ✅ Forgot password link — now wired up */}
-                <div className="flex justify-end -mt-2">
+                <div className="flex justify-end -mt-1">
                   <button
                     type="button"
                     onClick={() => switchView("forgot")}
-                    className="text-xs text-[#0d9488] cursor-pointer hover:underline underline-offset-4 transition-all"
+                    className="text-xs text-[#0d9488] hover:underline underline-offset-4 cursor-pointer"
                   >
                     Forgot password?
                   </button>
                 </div>
-
                 <SubmitButton
                   loading={loading}
                   label="Sign In Securely"
@@ -428,12 +449,11 @@ const UserLogin = () => {
                   icon={Lock}
                 />
               </form>
-
-              <p className="text-center mt-6 text-sm text-[#384022]/60">
+              <p className="text-center mt-5 text-xs text-[#384022]/60">
                 Need an admin account?{" "}
                 <button
                   onClick={() => switchView("register")}
-                  className="text-[#0d9488] cursor-pointer font-medium hover:underline underline-offset-4"
+                  className="text-[#0d9488] font-medium hover:underline underline-offset-4 cursor-pointer"
                 >
                   Sign up
                 </button>
@@ -441,46 +461,32 @@ const UserLogin = () => {
             </>
           )}
 
-          {/* ════════════ REGISTER VIEW ════════════ */}
           {view === "register" && (
             <>
-              <div className="mb-8">
-                <h1 className="text-2xl font-extrabold text-[#224D59] tracking-tight mb-2">
-                  {otpSent ? "Verify Your Email" : "Create Admin Account"}
-                </h1>
-                <p className="text-[#384022]/60 text-sm leading-relaxed">
-                  {otpSent
-                    ? `Enter the 6-digit code sent to ${email}`
-                    : "Register as an administrator to manage interns and oversee platform activities."}
-                </p>
-              </div>
-
-              {error && <ErrorMessage message={error} />}
-
               {!otpSent ? (
-                <form onSubmit={handleSendOTP} className="flex flex-col gap-6">
+                <form onSubmit={handleSendOTP} className="flex flex-col gap-5">
                   <FloatingInput
-                    id="name"
+                    id="m-name"
                     label="Full Name"
                     value={name}
                     onChange={clearError(setName)}
                   />
                   <FloatingInput
-                    id="reg-email"
+                    id="m-reg-email"
                     type="email"
-                    label="Work Email"
+                    label="Email"
                     value={email}
                     onChange={clearError(setEmail)}
                   />
-                  <FloatingInput
-                    id="reg-password"
-                    type="password"
+                  <PasswordInput
+                    id="m-reg-password"
                     label="Create Password"
                     value={password}
                     onChange={clearError(setPassword)}
+                    autoComplete="new-password"
                   />
                   <FloatingInput
-                    id="admin-secret"
+                    id="m-admin-secret"
                     label="Admin Secret Key"
                     value={adminSecret}
                     onChange={clearError(setAdminSecret)}
@@ -495,21 +501,21 @@ const UserLogin = () => {
               ) : (
                 <form
                   onSubmit={handleVerifyOTP}
-                  className="flex flex-col gap-6"
+                  className="flex flex-col gap-5"
                 >
                   <div className="flex items-center gap-3 px-4 py-3 bg-[#e1f5ee] border border-[#0d9488]/20 rounded-xl">
                     <Mail
-                      size={15}
+                      size={14}
                       strokeWidth={1.8}
                       className="text-[#0d9488] shrink-0"
                     />
-                    <p className="text-sm text-[#085041]">
+                    <p className="text-xs text-[#085041]">
                       Code sent to{" "}
                       <span className="font-semibold">{email}</span>
                     </p>
                   </div>
                   <FloatingInput
-                    id="otp"
+                    id="m-otp"
                     label="6-Digit OTP"
                     value={otp}
                     onChange={clearError(setOtp)}
@@ -529,18 +535,17 @@ const UserLogin = () => {
                       setOtp("");
                       setError("");
                     }}
-                    className="text-center text-sm text-[#0d9488] hover:underline underline-offset-4 cursor-pointer"
+                    className="text-center text-xs text-[#0d9488] hover:underline underline-offset-4 cursor-pointer"
                   >
                     Edit details
                   </button>
                 </form>
               )}
-
-              <p className="text-center mt-6 text-sm text-[#384022]/60">
-                Already have an account?{" "}
+              <p className="text-center mt-5 text-xs text-[#384022]/60">
+                Already registered?{" "}
                 <button
                   onClick={() => switchView("login")}
-                  className="text-[#0d9488] cursor-pointer font-medium hover:underline underline-offset-4"
+                  className="text-[#0d9488] font-medium hover:underline underline-offset-4 cursor-pointer"
                 >
                   Sign in
                 </button>
@@ -548,33 +553,15 @@ const UserLogin = () => {
             </>
           )}
 
-          {/* ════════════ FORGOT PASSWORD VIEW ════════════ */}
           {view === "forgot" && (
             <>
-              <div className="mb-6">
-                <h1 className="text-2xl font-extrabold text-[#224D59] tracking-tight mb-2">
-                  {fpOtpSent ? "Reset Your Password" : "Forgot Password?"}
-                </h1>
-                <p className="text-[#384022]/60 text-sm leading-relaxed">
-                  {fpOtpSent
-                    ? "Enter the OTP sent to your email and choose a new password."
-                    : "Enter your registered email and we'll send you a reset code."}
-                </p>
-              </div>
-
-              <StepDots current={fpOtpSent ? 2 : 1} />
-
-              {error && <ErrorMessage message={error} />}
-              {success && <SuccessMessage message={success} />}
-
-              {/* ── Step 1: Enter email → send OTP ── */}
               {!fpOtpSent ? (
                 <form
                   onSubmit={handleForgotSendOTP}
-                  className="flex flex-col gap-6"
+                  className="flex flex-col gap-5"
                 >
                   <FloatingInput
-                    id="fp-email"
+                    id="m-fp-email"
                     type="email"
                     label="Registered Email"
                     value={fpEmail}
@@ -592,26 +579,23 @@ const UserLogin = () => {
                   />
                 </form>
               ) : (
-                /* ── Step 2: Enter OTP + new password ── */
                 <form
                   onSubmit={handleResetPassword}
-                  className="flex flex-col gap-6"
+                  className="flex flex-col gap-5"
                 >
-                  {/* Email display badge */}
                   <div className="flex items-center gap-3 px-4 py-3 bg-[#e1f5ee] border border-[#0d9488]/20 rounded-xl">
                     <Mail
-                      size={15}
+                      size={14}
                       strokeWidth={1.8}
                       className="text-[#0d9488] shrink-0"
                     />
-                    <p className="text-sm text-[#085041]">
+                    <p className="text-xs text-[#085041]">
                       Code sent to{" "}
                       <span className="font-semibold">{fpEmail}</span>
                     </p>
                   </div>
-
                   <FloatingInput
-                    id="fp-otp"
+                    id="m-fp-otp"
                     label="6-Digit OTP"
                     value={fpOtp}
                     onChange={(e) => {
@@ -621,9 +605,8 @@ const UserLogin = () => {
                     maxLength={6}
                     inputMode="numeric"
                   />
-                  <FloatingInput
-                    id="fp-newpass"
-                    type="password"
+                  <PasswordInput
+                    id="m-fp-newpass"
                     label="New Password"
                     value={fpNewPassword}
                     onChange={(e) => {
@@ -632,9 +615,8 @@ const UserLogin = () => {
                     }}
                     autoComplete="new-password"
                   />
-                  <FloatingInput
-                    id="fp-confirm"
-                    type="password"
+                  <PasswordInput
+                    id="m-fp-confirm"
                     label="Confirm New Password"
                     value={fpConfirm}
                     onChange={(e) => {
@@ -643,15 +625,12 @@ const UserLogin = () => {
                     }}
                     autoComplete="new-password"
                   />
-
                   <SubmitButton
                     loading={loading}
                     label="Reset Password"
                     loadingLabel="Resetting..."
                     icon={KeyRound}
                   />
-
-                  {/* Resend / change email */}
                   <div className="flex justify-between text-xs text-[#384022]/50">
                     <button
                       type="button"
@@ -675,12 +654,11 @@ const UserLogin = () => {
                   </div>
                 </form>
               )}
-
-              <p className="text-center mt-6 text-sm text-[#384022]/60">
+              <p className="text-center mt-5 text-xs text-[#384022]/60">
                 Remembered it?{" "}
                 <button
                   onClick={() => switchView("login")}
-                  className="text-[#0d9488] cursor-pointer font-medium hover:underline underline-offset-4"
+                  className="text-[#0d9488] font-medium hover:underline underline-offset-4 cursor-pointer"
                 >
                   Sign in
                 </button>

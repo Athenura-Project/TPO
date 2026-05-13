@@ -83,7 +83,7 @@ const CTA = () => {
 
             {/* Secondary Action Button - Transparent with white border */}
             <a
-              href="/login"
+              href="/admin/login"
               className="w-full sm:w-auto px-10 py-4 rounded-xl bg-transparent border-2 border-white/30 text-white font-bold text-lg transition-all duration-300 transform hover:-translate-y-1 hover:border-white hover:bg-white hover:text-[#224D59] hover:shadow-lg text-center"
             >
               Admin Login

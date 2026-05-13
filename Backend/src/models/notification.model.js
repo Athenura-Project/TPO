@@ -3,18 +3,25 @@ import mongoose from "mongoose";
 const notificationSchema = new mongoose.Schema({
     recipientId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "interns"
+        ref: "interns",
+        required: true
     },
-    title: String,
-    message: String,
-    type: {
+    message: {
         type: String,
-        enum: ["followup", "announcement"],
-        default: "followup"
+        required: true
     },
-    isRead: {
+    read: {
         type: Boolean,
         default: false
+    },
+    relatedTPO: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "TPO"
+    },
+    type: {
+        type: String,
+        enum: ["info", "warning", "success", "error", "assignment"],
+        required: true
     }
 }, { timestamps: true });
 

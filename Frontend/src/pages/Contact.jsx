@@ -9,6 +9,7 @@ import {
   Phone,
   Send,
 } from "lucide-react";
+import FadeInUp from "../components/FadeInUp";
 
 const Contact = () => {
   const [form, setForm] = useState({ name: "", email: "", message: "" });
@@ -51,6 +52,7 @@ const Contact = () => {
 
       {/* hero section */}
       <section className="bg-[#224D59] pt-28 pb-36 px-4 text-center">
+      <FadeInUp>
         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight tracking-tight mb-4">
           Let's Build Your <span className="text-[#b3c633]">Future</span>
           <br />
@@ -60,6 +62,7 @@ const Contact = () => {
           Whether you're a student seeking an internship or a brand looking to
           collaborate, our team is ready to connect.
         </p>
+      </FadeInUp>
       </section>
 
       {/* Cards */}

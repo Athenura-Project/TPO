@@ -1,226 +1,406 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+
+const faqs = [
+  {
+    question: "What makes Athenura different from regular CRMs?",
+    answer:
+      "Athenura is purpose-built for Training & Placement Operations (TPO). Unlike generic CRMs, it features role-based workspaces for admins and interns, automated follow-up reminders tailored for corporate outreach, and instant bulk import for institutional data.",
+  },
+  {
+    question: "Can I upload bulk student and placement lead data?",
+    answer:
+      "Absolutely. Our platform supports seamless CSV and Excel file uploads. The system automatically parses the data, skips duplicates, and populates your database securely within seconds, eliminating manual entry.",
+  },
+  {
+    question: "How do the automated reminders work?",
+    answer:
+      "The system actively monitors the status of your leads. If an intern has a scheduled follow-up or a pending lead needs attention, Athenura automatically sends an email or dashboard notification at 8 AM daily so no opportunity slips through the cracks.",
+  },
+  {
+    question: "Is the institutional data completely secure?",
+    answer:
+      "Yes, security is our top priority. Athenura uses industry-standard encryption for data at rest and in transit. We also implement strict role-based access control, ensuring interns only see the data assigned to them, while admins have full oversight.",
+  },
+];
+
+/* Smooth height-animating accordion item */
+const FAQItem = ({ faq, index, isActive, onToggle, visible }) => {
+  const bodyRef = useRef(null);
+  const [height, setHeight] = useState(0);
+
+  useEffect(() => {
+    if (bodyRef.current) {
+      setHeight(isActive ? bodyRef.current.scrollHeight : 0);
+    }
+  }, [isActive]);
+
+  return (
+    <div
+      className="faq-item"
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0)' : 'translateY(28px)',
+        transition: `opacity 0.6s ease ${index * 0.08}s, transform 0.6s ease ${index * 0.08}s`,
+      }}
+    >
+      <div
+        onClick={onToggle}
+        className={`faq-card ${isActive ? 'active' : ''}`}
+        role="button"
+        aria-expanded={isActive}
+        tabIndex={0}
+        onKeyDown={(e) => e.key === 'Enter' && onToggle()}
+      >
+        {/* Question row */}
+        <div className="faq-header">
+          <span className="faq-index">{String(index + 1).padStart(2, '0')}</span>
+          <h3 className="faq-question">{faq.question}</h3>
+          <div className={`faq-chevron ${isActive ? 'open' : ''}`}>
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path
+                d="M4.5 6.75L9 11.25L13.5 6.75"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+        </div>
+
+        {/* Animated body */}
+        <div
+          className="faq-body"
+          style={{ height, overflow: 'hidden', transition: 'height 0.38s cubic-bezier(0.4,0,0.2,1)' }}
+        >
+          <div ref={bodyRef} className="faq-answer">
+            {faq.answer}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const FAQ = () => {
-  const [visibleItems, setVisibleItems] = useState({});
   const [activeIndex, setActiveIndex] = useState(null);
+  const [visible, setVisible] = useState(false);
+  const sectionRef = useRef(null);
+
+  const toggle = (i) => setActiveIndex(activeIndex === i ? null : i);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setVisibleItems((prev) => ({
-              ...prev,
-              [entry.target.dataset.id]: true,
-            }));
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
+      ([entry]) => { if (entry.isIntersecting) setVisible(true); },
+      { threshold: 0.1 }
     );
-
-    const elements = document.querySelectorAll('.animate-on-scroll');
-    elements.forEach((el) => observer.observe(el));
-
-    return () => {
-      elements.forEach((el) => observer.unobserve(el));
-    };
+    if (sectionRef.current) observer.observe(sectionRef.current);
+    return () => observer.disconnect();
   }, []);
 
-  const toggleFAQ = (index) => {
-    setActiveIndex(activeIndex === index ? null : index);
-  };
-
-  // Showing only top 4 FAQs on the landing page
-  const faqs = [
-    {
-      question: "What makes Athenura different from regular CRMs?",
-      answer: "Athenura is purpose-built for Training & Placement Operations (TPO). Unlike generic CRMs, it features role-based workspaces for admins and interns, automated follow-up reminders tailored for corporate outreach, and instant bulk import for institutional data."
-    },
-    {
-      question: "Can I upload bulk student and placement lead data?",
-      answer: "Absolutely. Our platform supports seamless CSV and Excel file uploads. The system automatically parses the data, skips duplicates, and populates your database securely within seconds, eliminating manual entry."
-    },
-    {
-      question: "How do the automated reminders work?",
-      answer: "The system actively monitors the status of your leads. If an intern has a scheduled follow-up or a pending lead needs attention, Athenura automatically sends an email/dashboard notification at 8 AM daily so no opportunity slips through the cracks."
-    },
-    {
-      question: "Is the institutional data completely secure?",
-      answer: "Yes, security is our top priority. Athenura uses industry-standard encryption for data at rest and in transit. We also implement strict role-based access control, ensuring interns only see the data assigned to them, while admins have full oversight."
-    }
-  ];
-
   return (
-    <section id="faq" className="w-full py-24 lg:py-32 bg-[#F5F7F2] relative overflow-hidden">
-      
-      {/* Ultra-Premium Subtle Dotted Grid Background */}
-      <div 
-        className="absolute inset-0 z-0 opacity-[0.03] pointer-events-none" 
-        style={{ 
-          backgroundImage: 'radial-gradient(#224D59 2px, transparent 2px)', 
-          backgroundSize: '30px 30px' 
-        }}
-      ></div>
+    <>
+      <style>{`
+        .faq-section {
+          width: 100%;
+          padding: 96px 0 112px;
+          background: #F5F7F2;
+          position: relative;
+          overflow: hidden;
+          font-family: 'Segoe UI', system-ui, sans-serif;
+        }
 
-      {/* Soft Ambient Glows */}
-      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-[#B8CC34]/5 rounded-full blur-[120px] pointer-events-none transform translate-x-1/3 -translate-y-1/4 z-0"></div>
-      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-[#224D59]/5 rounded-full blur-[100px] pointer-events-none transform -translate-x-1/3 translate-y-1/3 z-0"></div>
+        /* dot grid */
+        .faq-section::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background-image: radial-gradient(#224D59 1.5px, transparent 1.5px);
+          background-size: 28px 28px;
+          opacity: 0.04;
+          pointer-events: none;
+        }
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        
-        <div className="flex flex-col lg:flex-row gap-16 lg:gap-24 items-start">
-          
-          {/* Left Column: Sticky Header & Support Widget */}
-          <div className="w-full lg:w-1/3 lg:sticky lg:top-32 flex-shrink-0">
-            <div 
-              data-id="faq-header"
-              className={`animate-on-scroll transition-all duration-1000 ease-out ${
-                visibleItems['faq-header'] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
-              }`}
+        /* soft glows */
+        .faq-glow-tr {
+          position: absolute; top: -80px; right: -80px;
+          width: 520px; height: 520px;
+          background: radial-gradient(circle, rgba(184,204,52,0.07) 0%, transparent 70%);
+          pointer-events: none;
+        }
+        .faq-glow-bl {
+          position: absolute; bottom: -80px; left: -80px;
+          width: 440px; height: 440px;
+          background: radial-gradient(circle, rgba(34,77,89,0.06) 0%, transparent 70%);
+          pointer-events: none;
+        }
+
+        .faq-inner {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 0 24px;
+          position: relative;
+          z-index: 1;
+        }
+
+        /* Header */
+        .faq-header-block {
+          text-align: center;
+          margin-bottom: 64px;
+          transition: opacity 0.8s ease, transform 0.8s ease;
+        }
+        .faq-label {
+          display: inline-block;
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          color: #668824;
+          background: rgba(102,136,36,0.1);
+          border: 1px solid rgba(102,136,36,0.2);
+          padding: 4px 14px;
+          border-radius: 999px;
+          margin-bottom: 20px;
+        }
+        .faq-title {
+          font-size: clamp(2.2rem, 5vw, 3.5rem);
+          font-weight: 800;
+          color: #224D59;
+          line-height: 1.1;
+          letter-spacing: -0.02em;
+          margin: 0 0 16px;
+        }
+        .faq-subtitle {
+          font-size: 1.1rem;
+          color: rgba(56,64,34,0.7);
+          max-width: 560px;
+          margin: 0 auto;
+          line-height: 1.7;
+        }
+
+        /* Layout */
+        .faq-layout {
+          display: flex;
+          gap: 48px;
+          align-items: flex-start;
+        }
+        @media (max-width: 1024px) {
+          .faq-layout { flex-direction: column; gap: 40px; }
+          .faq-sidebar { position: static !important; width: 100% !important; }
+        }
+
+        /* Sidebar */
+        .faq-sidebar {
+          width: 300px;
+          flex-shrink: 0;
+          position: sticky;
+          top: 120px;
+        }
+        .faq-sidebar-card {
+          background: #fff;
+          border-radius: 20px;
+          padding: 28px;
+          box-shadow: 0 2px 16px rgba(34,77,89,0.07);
+          margin-bottom: 16px;
+          border: 1px solid rgba(34,77,89,0.07);
+        }
+        .faq-sidebar-card h4 {
+          font-size: 15px;
+          font-weight: 700;
+          color: #224D59;
+          margin: 0 0 8px;
+        }
+        .faq-sidebar-card p {
+          font-size: 13px;
+          color: rgba(56,64,34,0.65);
+          margin: 0 0 16px;
+          line-height: 1.6;
+        }
+        .faq-support-link {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 13px;
+          font-weight: 700;
+          color: #668824;
+          text-decoration: none;
+          transition: gap 0.2s ease;
+        }
+        .faq-support-link:hover { gap: 10px; }
+        .faq-explore-link {
+          display: block;
+          padding: 20px 24px;
+          background: #fff;
+          border-radius: 16px;
+          border: 1px solid rgba(34,77,89,0.1);
+          text-decoration: none;
+          transition: box-shadow 0.22s ease, transform 0.22s ease;
+        }
+        .faq-explore-link:hover {
+          box-shadow: 0 8px 24px rgba(34,77,89,0.1);
+          transform: translateY(-2px);
+        }
+        .faq-explore-link h4 {
+          font-size: 14px;
+          font-weight: 700;
+          color: #224D59;
+          margin: 0 0 4px;
+        }
+        .faq-explore-link p {
+          font-size: 12px;
+          color: rgba(56,64,34,0.55);
+          margin: 0;
+        }
+
+        /* Accordion list */
+        .faq-list {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          min-width: 0;
+        }
+
+        /* FAQ card */
+        .faq-item { width: 100%; }
+        .faq-card {
+          background: #fff;
+          border-radius: 18px;
+          border: 1px solid rgba(34,77,89,0.08);
+          cursor: pointer;
+          transition: box-shadow 0.25s ease, border-color 0.25s ease;
+          outline: none;
+        }
+        .faq-card:hover {
+          box-shadow: 0 6px 28px rgba(34,77,89,0.09);
+          border-color: rgba(34,77,89,0.14);
+        }
+        .faq-card.active {
+          box-shadow: 0 8px 32px rgba(34,77,89,0.12);
+          border-color: rgba(34,77,89,0.18);
+        }
+        .faq-card:focus-visible {
+          box-shadow: 0 0 0 3px rgba(102,136,36,0.35);
+        }
+
+        .faq-header {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          padding: 22px 24px;
+          user-select: none;
+        }
+        .faq-index {
+          font-size: 11px;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          color: rgba(34,77,89,0.3);
+          min-width: 24px;
+          font-variant-numeric: tabular-nums;
+          transition: color 0.25s ease;
+        }
+        .faq-card.active .faq-index { color: #668824; }
+
+        .faq-question {
+          flex: 1;
+          font-size: 15px;
+          font-weight: 700;
+          color: #224D59;
+          margin: 0;
+          line-height: 1.4;
+        }
+
+        .faq-chevron {
+          color: rgba(34,77,89,0.4);
+          transition: transform 0.35s cubic-bezier(0.4,0,0.2,1), color 0.25s ease;
+          display: flex;
+          align-items: center;
+          flex-shrink: 0;
+        }
+        .faq-chevron.open {
+          transform: rotate(180deg);
+          color: #224D59;
+        }
+
+        .faq-answer {
+          padding: 0 24px 22px 64px;
+          font-size: 14.5px;
+          color: rgba(56,64,34,0.72);
+          line-height: 1.75;
+          /* small top separator */
+          border-top: 1px solid rgba(34,77,89,0.06);
+          margin: 0 24px;
+          padding-left: 40px;
+          padding-top: 16px;
+          padding-bottom: 20px;
+        }
+      `}</style>
+
+      <section className="faq-section" ref={sectionRef}>
+        <div className="faq-glow-tr" />
+        <div className="faq-glow-bl" />
+
+        <div className="faq-inner">
+          {/* Header */}
+          <div
+            className="faq-header-block"
+            style={{
+              opacity: visible ? 1 : 0,
+              transform: visible ? 'translateY(0)' : 'translateY(20px)',
+              transition: 'opacity 0.8s ease, transform 0.8s ease',
+            }}
+          >
+            <span className="faq-label">Help Center</span>
+            <h2 className="faq-title">Frequently Asked Questions</h2>
+            <p className="faq-subtitle">
+              Everything you need to know about Athenura — placements, onboarding,
+              and keeping your data secure.
+            </p>
+          </div>
+
+          <div className="faq-layout">
+            {/* Sidebar */}
+            <aside
+              className="faq-sidebar"
+              style={{
+                opacity: visible ? 1 : 0,
+                transform: visible ? 'translateY(0)' : 'translateY(24px)',
+                transition: 'opacity 0.7s ease 0.15s, transform 0.7s ease 0.15s',
+              }}
             >
-              <span className="inline-block px-4 py-1.5 rounded-full bg-[#B8CC34]/15 border border-[#B8CC34]/40 text-[#668824] text-xs font-bold tracking-widest uppercase mb-6 shadow-sm">
-                FAQ
-              </span>
-              <h2 className="text-4xl md:text-5xl font-extrabold text-[#224D59] leading-tight mb-6 tracking-tight">
-                We've got <br className="hidden lg:block"/> the answers.
-              </h2>
-              <p className="text-lg text-[#384022]/80 font-medium leading-relaxed mb-10">
-                Everything you need to know about the product and billing. Can't find the answer you're looking for?
-              </p>
-
-              {/* Premium Support Widget */}
-              <div className="bg-white/80 backdrop-blur-md border border-[#224D59]/10 rounded-2xl p-6 shadow-[0_10px_40px_rgba(34,77,89,0.05)] relative overflow-hidden group mb-8">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#B8CC34]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <div className="relative z-10">
-                  {/* Overlapping Avatar Bubbles */}
-                  <div className="flex -space-x-3 mb-5">
-                    <div className="w-10 h-10 rounded-full border-2 border-white bg-[#224D59] flex items-center justify-center text-xs font-bold text-white shadow-sm z-30">A</div>
-                    <div className="w-10 h-10 rounded-full border-2 border-white bg-[#668824] flex items-center justify-center text-xs font-bold text-white shadow-sm z-20">B</div>
-                    <div className="w-10 h-10 rounded-full border-2 border-white bg-[#B8CC34] flex items-center justify-center text-xs font-bold text-[#224D59] shadow-sm z-10">C</div>
-                  </div>
-                  <h4 className="text-lg font-bold text-[#224D59] mb-2">Still have questions?</h4>
-                  <p className="text-sm text-[#384022]/70 font-medium mb-5">
-                    Our team is here to help you get the most out of Athenura.
-                  </p>
-                  <a href="mailto:support@athenura.com" className="inline-flex items-center text-sm font-bold text-[#668824] hover:text-[#224D59] transition-colors group/link">
-                    Contact Support
-                    <svg className="w-4 h-4 ml-2 transform group-hover/link:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
-                    </svg>
-                  </a>
-                </div>
-              </div>
-
-              {/* NEW: View Full FAQ Page Link */}
-              <a 
-                href="/faq" 
-                className="group flex items-center p-4 bg-white rounded-2xl border border-[#224D59]/10 hover:border-[#B8CC34]/60 hover:shadow-lg transition-all duration-300"
-              >
-                <div className="flex-1">
-                  <h4 className="text-[#224D59] font-bold text-base mb-0.5">Explore All FAQs</h4>
-                  <p className="text-[#384022]/60 text-xs font-medium">Read detailed guides for Admins & Interns</p>
-                </div>
-                <div className="w-10 h-10 rounded-full bg-[#F5F7F2] flex items-center justify-center group-hover:bg-[#B8CC34] transition-colors duration-300">
-                  <svg className="w-5 h-5 text-[#224D59] transform group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+              <div className="faq-sidebar-card">
+                <h4>Still have questions?</h4>
+                <p>Our team is here and happy to help.</p>
+                <a href="mailto:support@athenura.com" className="faq-support-link">
+                  Contact Support
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
-                </div>
+                </a>
+              </div>
+              <a href="/faq" className="faq-explore-link">
+                <h4>Explore All FAQs</h4>
+                <p>Read detailed guides &amp; docs</p>
               </a>
-              
+            </aside>
+
+            {/* Accordion list */}
+            <div className="faq-list">
+              {faqs.map((faq, i) => (
+                <FAQItem
+                  key={i}
+                  faq={faq}
+                  index={i}
+                  isActive={activeIndex === i}
+                  onToggle={() => toggle(i)}
+                  visible={visible}
+                />
+              ))}
             </div>
           </div>
-
-          {/* Right Column: Accordion List */}
-          <div className="w-full lg:w-2/3 space-y-4 pt-2">
-            {faqs.map((faq, index) => {
-              const isActive = activeIndex === index;
-              
-              return (
-                <div 
-                  key={index}
-                  data-id={`faq-${index}`}
-                  className={`animate-on-scroll transition-all duration-700 ease-out ${
-                    visibleItems[`faq-${index}`] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16'
-                  }`}
-                  style={{ transitionDelay: `${index * 150}ms` }}
-                >
-                  <div 
-                    className={`relative bg-white/70 backdrop-blur-sm rounded-2xl border transition-all duration-500 cursor-pointer overflow-hidden group ${
-                      isActive 
-                        ? 'border-[#668824]/50 shadow-[0_15px_40px_rgba(34,77,89,0.08)] bg-white' 
-                        : 'border-[#224D59]/10 hover:border-[#224D59]/20 hover:shadow-md hover:bg-white'
-                    }`}
-                    onClick={() => toggleFAQ(index)}
-                  >
-                    {/* Active State Accent Line */}
-                    <div className={`absolute left-0 top-0 bottom-0 w-1.5 bg-[#B8CC34] transition-transform duration-500 origin-top ${isActive ? 'scale-y-100' : 'scale-y-0'}`}></div>
-
-                    {/* Question Header */}
-                    <div className="px-6 py-6 sm:px-8 sm:py-7 flex justify-between items-center z-10 relative">
-                      <h3 className={`text-base sm:text-lg font-bold pr-8 transition-colors duration-300 ${
-                        isActive ? 'text-[#224D59]' : 'text-[#224D59]/80 group-hover:text-[#224D59]'
-                      }`}>
-                        {faq.question}
-                      </h3>
-                      
-                      {/* Premium Morphing Plus/Minus Icon */}
-                      <div className={`flex-shrink-0 w-8 h-8 rounded-full border flex items-center justify-center transition-all duration-500 ${
-                        isActive ? 'bg-[#224D59] border-[#224D59] text-[#B8CC34] rotate-180' : 'bg-transparent border-[#224D59]/20 text-[#224D59] group-hover:bg-[#224D59]/5'
-                      }`}>
-                        <svg 
-                          className={`w-4 h-4 transform transition-transform duration-500 ${isActive ? 'rotate-45' : 'rotate-0'}`} 
-                          fill="none" 
-                          stroke="currentColor" 
-                          viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4"></path>
-                        </svg>
-                      </div>
-                    </div>
-
-                    {/* Answer Content (Smooth Grid Height Transition) */}
-                    <div 
-                      className={`grid transition-all duration-500 ease-in-out ${
-                        isActive ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
-                      }`}
-                    >
-                      <div className="overflow-hidden">
-                        <p className="px-6 pb-6 sm:px-8 sm:pb-8 pt-0 text-[#384022]/70 font-medium leading-relaxed text-base">
-                          {faq.answer}
-                        </p>
-                      </div>
-                    </div>
-                    
-                  </div>
-                </div>
-              );
-            })}
-
-            {/* View Full FAQ Call-to-action button at the bottom of the list */}
-            <div 
-              data-id="faq-view-all"
-              className={`animate-on-scroll mt-8 text-center transition-all duration-700 ease-out delay-500 ${
-                visibleItems['faq-view-all'] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
-              }`}
-            >
-              <a 
-                href="/faq" 
-                className="inline-flex items-center px-8 py-4 rounded-xl bg-transparent border-2 border-[#224D59]/20 text-[#224D59] font-bold text-base transition-all duration-300 hover:border-[#B8CC34] hover:bg-[#B8CC34] hover:shadow-[0_10px_25px_rgba(184,204,52,0.3)] hover:-translate-y-1 group"
-              >
-                View Complete Knowledge Base
-                <svg className="w-5 h-5 ml-2 transform group-hover:translate-x-1.5 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
-                </svg>
-              </a>
-            </div>
-
-          </div>
-
         </div>
-      </div>
-    </section>
+      </section>
+    </>
   );
 };
 

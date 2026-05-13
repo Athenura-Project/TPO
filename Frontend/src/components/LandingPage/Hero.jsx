@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import FadeInUp from '../../components/FadeInUp';
 
 const Hero = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -64,6 +65,7 @@ const Hero = () => {
   // Actual Hero Content
   return (
     // REDUCED TOP PADDING HERE AS WELL TO MATCH SKELETON
+    <FadeInUp>
     <section className={`relative w-full min-h-[90vh] flex items-center pt-12 pb-12 sm:pt-16 sm:pb-16 lg:pt-20 lg:pb-24 overflow-hidden bg-[#F5F7F2] transition-opacity duration-700 ease-out ${fadeIn ? 'opacity-100' : 'opacity-0'}`}>
       {/* Background decorative ambient glows */}
       <div className="absolute top-0 left-0 w-64 h-64 md:w-[500px] md:h-[500px] bg-[#B8CC34] rounded-full mix-blend-multiply filter blur-[90px] md:blur-[130px] opacity-20 animate-pulse-slow pointer-events-none z-0"></div>
@@ -150,6 +152,7 @@ const Hero = () => {
         </div>
       </div>
     </section>
+    </FadeInUp>
   );
 };
 

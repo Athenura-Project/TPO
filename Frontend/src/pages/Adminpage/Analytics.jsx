@@ -17,6 +17,7 @@ const AnalyticsPage = () => {
       setError('');
       try {
         const data = await getAdminAnalytics();
+        console.log("ANALYTICS DATA:", data);
         setAnalytics(data);
       } catch (err) {
         setError(err.message || 'Failed to fetch analytics');
@@ -38,25 +39,8 @@ const AnalyticsPage = () => {
     { title: "Conversion Rate", value: `${analytics?.conversionRate ?? 0}%`, trend: "Live", color: "bg-gradient-to-br from-[#B8CC34] to-[#8FA622]", text: "text-[#224D59]", badge: "bg-black/10 text-[#224D59]" }
   ];
 
-  const branchStats = [
-    { name: "Computer Science (CSE)", percentage: 88, placed: 320, total: 363 },
-    { name: "Information Tech. (IT)", percentage: 82, placed: 210, total: 256 },
-    { name: "Electronics (ECE)", percentage: 65, placed: 180, total: 276 },
-    { name: "Mechanical (ME)", percentage: 45, placed: 90, total: 200 },
-    { name: "Civil Engineering (CE)", percentage: 38, placed: 42, total: 110 },
-  ];
+  const branchStats = analytics?.branchStats || [];
 
-  const topRecruiters = [
-    { company: "Google India", hires: 24, avgPackage: "24 LPA" },
-    { company: "Microsoft", hires: 18, avgPackage: "22 LPA" },
-    { company: "Amazon", hires: 15, avgPackage: "20 LPA" },
-    { company: "TCS Digital", hires: 85, avgPackage: "7.5 LPA" },
-    { company: "Accenture", hires: 112, avgPackage: "6.5 LPA" },
-  ];
-
-  // Placement Timeline Data (Mock)
-  const timelineData = [40, 55, 30, 85, 110, 95, 130, 160, 140, 190, 210, 180];
-  const maxTimelineValue = Math.max(...timelineData);
 
   // Animations
   const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
@@ -74,21 +58,32 @@ const AnalyticsPage = () => {
       // 1. Create CSV content
       let csvContent = "data:text/csv;charset=utf-8,";
       
-      // Add Branch Stats
-      csvContent += "Branch Performance\n";
+      // Section: Summary Stats
+      csvContent += "Summary Statistics\n";
+      csvContent += `Total Interns,${analytics?.totalInterns || 0}\n`;
+      csvContent += `Total TPOs,${analytics?.totalTPOs || 0}\n`;
+      csvContent += `Converted TPOs,${analytics?.convertedTPOs || 0}\n`;
+      csvContent += `Conversion Rate,${analytics?.conversionRate || 0}%\n\n`;
+
+      // Section: Branch Stats
+      csvContent += "Branch-wise Performance\n";
       csvContent += "Branch Name,Placement Percentage,Students Placed,Total Students\n";
       branchStats.forEach(row => {
         csvContent += `"${row.name}",${row.percentage}%,${row.placed},${row.total}\n`;
       });
-      
-      csvContent += "\n"; // Empty row for separation
-      
-      // Add Top Recruiters
-      csvContent += "Top Recruiters\n";
-      csvContent += "Company Name,Total Hires,Average Package\n";
-      topRecruiters.forEach(row => {
-        csvContent += `"${row.company}",${row.hires},"${row.avgPackage}"\n`;
+      csvContent += "\n";
+
+      // Section: Monthly Performance (Performance Update)
+      csvContent += "Monthly Performance Update (Last 12 Months)\n";
+      csvContent += "Month,TPOs Added,TPOs Converted\n";
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      months.forEach((month, i) => {
+        const added = analytics?.timelineData?.added?.[i] || 0;
+        const converted = analytics?.timelineData?.converted?.[i] || 0;
+        csvContent += `${month},${added},${converted}\n`;
       });
+
+
 
       // 2. Create a Blob and Download Link
       const encodedUri = encodeURI(csvContent);
@@ -184,110 +179,85 @@ const AnalyticsPage = () => {
             </div>
             )}
 
-            {/* 🚀 CHARTS SECTION */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 pt-4">
+
+
+            {/* 🚀 PERFORMANCE UPDATE (Dual-Bar Chart) */}
+            <motion.div variants={itemVariants} className="bg-white/80 backdrop-blur-xl border border-[#224D59]/10 rounded-3xl p-5 sm:p-7 shadow-sm flex flex-col min-h-[400px] relative overflow-hidden">
+              <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-[#B8CC34]/5 rounded-full blur-2xl"></div>
               
-              {/* Placement Timeline (CSS Bar Chart) */}
-              <motion.div variants={itemVariants} className="lg:col-span-2 bg-white/80 backdrop-blur-xl border border-[#224D59]/10 rounded-3xl p-5 sm:p-7 shadow-sm flex flex-col min-h-[350px] relative overflow-hidden">
-                {/* Decorative background circle */}
-                <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-[#B8CC34]/5 rounded-full blur-2xl"></div>
-                
-                <div className="flex justify-between items-center mb-8 relative z-10">
-                  <div>
-                    <h3 className="text-lg font-extrabold text-[#224D59]">Placement Timeline</h3>
-                    <p className="text-xs font-medium text-[#384022]/60 mt-1">Number of offers per month (2025-2026)</p>
+              <div className="flex justify-between items-center mb-8 relative z-10">
+                <div>
+                  <h3 className="text-lg font-extrabold text-[#224D59]">Performance Update</h3>
+                  <p className="text-xs font-medium text-[#384022]/60 mt-1">Monthly comparison of TPOs added vs converted leads.</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#224D59]"></div>
+                    <span className="text-[10px] font-bold text-[#224D59]">Added</span>
                   </div>
-                  <select className="bg-[#F5F7F2] border border-[#224D59]/10 text-[#224D59] text-xs font-bold rounded-lg px-3 py-1.5 outline-none cursor-pointer">
-                    <option>This Year</option>
-                    <option>Last Year</option>
-                  </select>
-                </div>
-                
-                {/* Animated Bar Chart */}
-                <div className="flex-1 flex items-end justify-between space-x-1 sm:space-x-3 pt-4 border-b border-[#224D59]/5 pb-2 relative z-10">
-                  {timelineData.map((val, i) => (
-                    <div key={i} className="w-full flex flex-col items-center group h-full justify-end relative">
-                      {/* Tooltip on Hover */}
-                      <div className="absolute -top-8 bg-[#224D59] text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                        {val} Offers
-                      </div>
-                      <motion.div 
-                        initial={{ height: 0 }} 
-                        animate={{ height: `${(val / maxTimelineValue) * 100}%` }} 
-                        transition={{ duration: 1.5, delay: i * 0.05, ease: "easeOut" }}
-                        className="w-full rounded-t-sm sm:rounded-t-md transition-all duration-300 bg-gradient-to-t from-[#224D59]/80 to-[#224D59] group-hover:from-[#B8CC34] group-hover:to-[#B8CC34] opacity-80 group-hover:opacity-100"
-                      ></motion.div>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex justify-between mt-3 text-[9px] sm:text-[10px] font-bold text-[#384022]/50 px-1 uppercase tracking-widest relative z-10">
-                  <span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span><span>Nov</span><span>Dec</span><span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span>
-                </div>
-              </motion.div>
-
-              {/* Top Recruiters List */}
-              <motion.div variants={itemVariants} className="bg-[#224D59] border border-[#224D59]/10 rounded-3xl p-5 sm:p-7 shadow-lg flex flex-col text-white relative overflow-hidden">
-                {/* Decorative element */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-[#B8CC34]/20 rounded-bl-full pointer-events-none"></div>
-
-                <h3 className="text-lg font-extrabold mb-1 relative z-10">Top Recruiters</h3>
-                <p className="text-xs text-white/60 font-medium mb-6 relative z-10">Companies with most hires this season</p>
-                
-                <div className="space-y-4 flex-1 relative z-10">
-                  {topRecruiters.map((comp, i) => (
-                    <div key={i} className="flex items-center justify-between group">
-                      <div className="flex items-center">
-                        <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center font-bold text-[#B8CC34] text-xs mr-3">
-                          {i + 1}
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold group-hover:text-[#B8CC34] transition-colors">{comp.company}</p>
-                          <p className="text-[10px] font-medium text-white/50 mt-0.5">Avg: {comp.avgPackage}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-black text-white">{comp.hires}</span>
-                        <span className="text-[10px] text-white/50 ml-1 block">Hires</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-
-            </div>
-
-            {/* 🚀 BRANCH WISE PERFORMANCE */}
-            <motion.div variants={itemVariants} className="bg-white/80 backdrop-blur-xl border border-[#224D59]/10 rounded-3xl p-5 sm:p-7 shadow-sm mt-6">
-              <h3 className="text-lg font-extrabold text-[#224D59] mb-1">Branch-wise Performance</h3>
-              <p className="text-xs font-medium text-[#384022]/60 mb-6">Placement percentage across different departments</p>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
-                {branchStats.map((branch, i) => (
-                  <div key={i} className="w-full">
-                    <div className="flex justify-between items-end mb-2">
-                      <span className="text-sm font-bold text-[#224D59]">{branch.name}</span>
-                      <div className="text-right">
-                        <span className="text-sm font-black text-[#B8CC34]">{branch.percentage}%</span>
-                        <span className="text-[10px] text-[#384022]/50 ml-2">({branch.placed}/{branch.total})</span>
-                      </div>
-                    </div>
-                    {/* Progress Bar Track */}
-                    <div className="w-full h-2.5 bg-[#F5F7F2] rounded-full overflow-hidden border border-[#224D59]/5">
-                      {/* Animated Fill */}
-                      <motion.div 
-                        initial={{ width: 0 }}
-                        whileInView={{ width: `${branch.percentage}%` }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 1.5, ease: "easeOut" }}
-                        className={`h-full rounded-full ${branch.percentage > 75 ? 'bg-[#B8CC34]' : branch.percentage > 50 ? 'bg-[#224D59]' : 'bg-orange-400'}`}
-                      ></motion.div>
-                    </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#B8CC34]"></div>
+                    <span className="text-[10px] font-bold text-[#224D59]">Converted</span>
                   </div>
-                ))}
+                </div>
               </div>
+              
+              {/* Performance Bars */}
+              <div className="flex-1 flex items-stretch justify-between gap-1 sm:gap-2 pt-10 border-b border-[#224D59]/10 pb-2 relative z-10 h-64 px-2">
+                {(() => {
+                  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                  const addedData = analytics?.timelineData?.added || new Array(12).fill(0);
+                  const convertedData = analytics?.timelineData?.converted || new Array(12).fill(0);
+                  const maxVal = Math.max(...addedData, ...convertedData, 1);
+
+                  return months.map((month, i) => {
+                    const addedVal = addedData[i];
+                    const convertedVal = convertedData[i];
+                    const addedHeight = (addedVal / maxVal) * 100;
+                    const convertedHeight = (convertedVal / maxVal) * 100;
+                    
+                    return (
+                      <div key={i} className="flex-1 flex flex-col items-center group min-w-[20px]">
+                        <div className="flex-1 w-full flex items-end justify-center gap-1">
+                          {/* Added Bar */}
+                          <div className="relative flex-1 h-full flex flex-col justify-end group/added">
+                            {addedVal > 0 && (
+                              <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-[#224D59] text-white text-[9px] font-bold px-2 py-1 rounded shadow-lg z-30 whitespace-nowrap opacity-0 group-hover/added:opacity-100 transition-opacity">
+                                {addedVal} Added
+                              </div>
+                            )}
+                            <motion.div 
+                              initial={{ height: 0 }}
+                              animate={{ height: `${addedHeight}%` }}
+                              className="w-full bg-[#224D59] rounded-t-sm min-h-[2px]"
+                            />
+                          </div>
+
+                          {/* Converted Bar */}
+                          <div className="relative flex-1 h-full flex flex-col justify-end group/converted">
+                            {convertedVal > 0 && (
+                              <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-[#B8CC34] text-[#224D59] text-[9px] font-bold px-2 py-1 rounded shadow-lg z-30 whitespace-nowrap opacity-0 group-hover/converted:opacity-100 transition-opacity">
+                                {convertedVal} Conv.
+                              </div>
+                            )}
+                            <motion.div 
+                              initial={{ height: 0 }}
+                              animate={{ height: `${convertedHeight}%` }}
+                              className="w-full bg-[#B8CC34] rounded-t-sm min-h-[2px]"
+                            />
+                          </div>
+                        </div>
+                        <span className="mt-4 text-[9px] font-black text-[#224D59]/40 uppercase">{month}</span>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+
             </motion.div>
 
           </motion.div>
+
         </div>
       </main>
     </div>

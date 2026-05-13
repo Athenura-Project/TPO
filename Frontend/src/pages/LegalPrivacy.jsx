@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import Navbar from '../components/LandingPage/Navbar';
 import Footer from '../components/LandingPage/Footer';
+import FadeInUp from '../components/FadeInUp';
 
-const PrivacyPolicy = () => {
+const LegalPrivacy = () => {
   const [fadeIn, setFadeIn] = useState(false);
   const [activeSection, setActiveSection] = useState('introduction');
 
@@ -53,7 +54,7 @@ const PrivacyPolicy = () => {
   }, []);
 
   return (
-    <div className={`min-h-screen bg-[#F5F7F2] pt-24 pb-20 relative transition-opacity duration-700 ease-out ${fadeIn ? 'opacity-100' : 'opacity-0'}`}>
+    <div className={`min-h-screen bg-[#F5F7F2] pt-24 relative transition-opacity duration-700 ease-out ${fadeIn ? 'opacity-100' : 'opacity-0'}`}>
       <Navbar />
       {/* Background Elements Wrapper */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
@@ -70,25 +71,26 @@ const PrivacyPolicy = () => {
         <div className="absolute bottom-0 left-[-10%] w-[600px] h-[600px] bg-[#224D59]/5 rounded-full blur-[150px]"></div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 py-10">
         
         {/* Page Header */}
-        <div className="max-w-3xl mb-12 lg:mb-16 pt-8">
           <a href="/" className="inline-flex items-center px-4 py-2 rounded-full bg-white border border-[#224D59]/10 text-sm font-bold text-[#224D59] hover:bg-[#F5F7F2] hover:border-[#B8CC34]/50 transition-all duration-300 mb-8 group shadow-sm">
             <svg className="w-4 h-4 mr-2 text-[#668824] transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
             </svg>
             Back to Home
           </a>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-[#224D59] tracking-tight mb-6">
+          <FadeInUp>
+        <div className="mb-12 lg:mb-16">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-center text-[#224D59] tracking-tight mb-6">
             Privacy Policy
           </h1>
-          <p className="text-lg text-[#384022]/70 font-medium flex items-center">
-            <span className="bg-white px-3 py-1 rounded-md border border-[#224D59]/5 shadow-sm mr-3">Effective: April 10, 2026</span>
+          <p className="text-lg text-[#384022]/70 font-medium flex items-center justify-center">
             <span className="text-[#B8CC34] mx-1">•</span> 
             <span className="ml-3">Updated: April 10, 2026</span>
           </p>
         </div>
+        </FadeInUp>
 
         {/* Main Content Layout */}
         <div className="flex flex-col lg:flex-row gap-12 items-start relative">
@@ -288,4 +290,4 @@ const PrivacyPolicy = () => {
   );
 };
 
-export default PrivacyPolicy;
+export default LegalPrivacy;

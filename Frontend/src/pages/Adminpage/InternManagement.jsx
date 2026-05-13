@@ -1,23 +1,34 @@
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import {  AnimatePresence } from 'framer-motion';
+import { motion } from "framer-motion";
+import { useNavigate } from 'react-router-dom'; // 1. Added useNavigate for redirect
 import AdminSidebar from '../../components/admin/Sidebar'; 
 import AdminHeader from '../../components/admin/Header';   
-import { createAdminIntern, getAdminInterns } from '../../api/adminApi';
+import { 
+  createAdminIntern,
+  getAdminInterns,
+  updateAdminIntern,
+  deleteAdminIntern
+} from '../../api/adminApi';
+
 
 const InternsPage = () => {
+  const navigate = useNavigate(); // 2. Initialized navigate
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [editingId, setEditingId] = useState(null); // ✅ ADD THIS
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
     password: '',
     branch: 'B.Tech CSE',
-    status: 'Active',
+    status: "Active",
+    studentId: '', // ✅ ADDED
   });
 
   const [interns, setInterns] = useState([]);
@@ -44,6 +55,8 @@ const InternsPage = () => {
     hidden: { opacity: 0 },
     show: { opacity: 1, transition: { staggerChildren: 0.1 } }
   };
+
+
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
     show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
@@ -65,15 +78,16 @@ const InternsPage = () => {
     email: intern?.email || 'N/A',
     branch: intern?.branch || intern?.department || 'N/A',
     status: intern?.status || 'Active',
+    studentId: intern?.studentId || 'N/A', // ✅ ADDED
     tpo: intern?.tpo || intern?.assignedTPO?.companyName || 'Unassigned',
   }));
 
-  const filteredInterns = normalizedInterns.filter((intern) =>
-    [intern.name, intern.email, intern.branch, intern.tpo]
-      .join(' ')
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase())
-  );
+  // 3. Fixed and Improved Search Logic
+  const filteredInterns = normalizedInterns.filter((intern) => {
+    if (!searchQuery) return true;
+    const searchString = `${intern.name} ${intern.studentId} ${intern.email} ${intern.branch} ${intern.tpo} ${intern.status}`.toLowerCase();
+    return searchString.includes(searchQuery.toLowerCase());
+  });
 
   const resetForm = () => {
     setFormData({
@@ -83,28 +97,62 @@ const InternsPage = () => {
       password: '',
       branch: 'B.Tech CSE',
       status: 'Active',
+      studentId: '', // ✅ ADDED
     });
   };
 
-  const handleAddIntern = async () => {
-    if (!formData.name || !formData.email || !formData.password) {
-      setError('Name, email and password are required to add intern');
+const handleSaveIntern = async () => {
+  try {
+    setIsSaving(true);
+
+    if (!formData.name || !formData.email || (!editingId && !formData.password)) {
+      setError("Required fields missing");
       return;
     }
 
-    setIsSaving(true);
-    setError('');
-    try {
+    if (editingId) {
+      await updateAdminIntern(editingId, formData);
+    } else {
       await createAdminIntern(formData);
-      setIsModalOpen(false);
-      resetForm();
-      await fetchInterns();
-    } catch (err) {
-      setError(err.message || 'Failed to add intern');
-    } finally {
-      setIsSaving(false);
     }
-  };
+
+    setIsModalOpen(false);
+    setEditingId(null);
+    resetForm();
+    fetchInterns();
+  } catch (err) {
+    setError(err.message || "Operation failed");
+  } finally {
+    setIsSaving(false);
+  }
+};
+
+
+const handleEditIntern = (intern) => {
+  setFormData({
+    name: intern.name || "",
+    email: intern.email || "",
+    phone: intern.phone || "",
+    password: "",
+    branch: intern.branch || "B.Tech CSE",
+    status: intern.status || "Active",
+    studentId: intern.studentId || "", // ✅ ADDED
+  });
+
+  setEditingId(intern.id);
+  setIsModalOpen(true);
+};
+
+const handleDeleteIntern = async (id) => {
+  try {
+    if (!window.confirm("Delete this intern?")) return;
+
+    await deleteAdminIntern(id);
+    fetchInterns();
+  } catch (err) {
+    setError(err.message || "Delete failed");
+  }
+};
 
   return (
     <div className="flex h-screen bg-[#F5F7F2] font-sans overflow-hidden selection:bg-[#B8CC34] selection:text-[#224D59]">
@@ -138,7 +186,11 @@ const InternsPage = () => {
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#B8CC34]/10 rounded-full blur-[120px] pointer-events-none z-0"></div>
         
-        <AdminHeader toggleSidebar={() => setIsMobileSidebarOpen(true)} />
+        {/* 4. Passed onSearch to AdminHeader to link global search bar */}
+        <AdminHeader 
+          toggleSidebar={() => setIsMobileSidebarOpen(true)} 
+          onSearch={(val) => setSearchQuery(val)} 
+        />
 
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10 relative z-10 custom-scrollbar">
           <motion.div variants={containerVariants} initial="hidden" animate="show" className="max-w-7xl mx-auto space-y-6">
@@ -161,6 +213,18 @@ const InternsPage = () => {
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
+                
+                {/* 5. Added Bulk Import Button */}
+                <button 
+                  onClick={() => navigate('/admin/bulk/import')}
+                  className="px-5 py-2.5 rounded-xl bg-white border border-[#224D59]/10 text-[#224D59] font-bold text-sm hover:bg-[#F5F7F2] shadow-sm hover:shadow transition-all flex items-center justify-center"
+                >
+                  <svg className="w-4 h-4 mr-2 text-[#224D59]/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                  </svg>
+                  Bulk Import
+                </button>
+
                 <button 
                   onClick={() => setIsModalOpen(true)}
                   className="px-5 py-2.5 rounded-xl bg-[#224D59] text-white font-bold text-sm hover:bg-[#1A3A43] shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 flex items-center justify-center"
@@ -190,6 +254,7 @@ const InternsPage = () => {
                 <thead>
                   <tr className="bg-[#224D59]/5 border-b border-[#224D59]/10">
                     <th className="py-4 px-6 text-xs font-extrabold text-[#224D59] uppercase tracking-wider">Intern Name</th>
+                    <th className="py-4 px-6 text-xs font-extrabold text-[#224D59] uppercase tracking-wider">AITH ID</th>
                     <th className="py-4 px-6 text-xs font-extrabold text-[#224D59] uppercase tracking-wider">Branch</th>
                     <th className="py-4 px-6 text-xs font-extrabold text-[#224D59] uppercase tracking-wider">Status</th>
                     <th className="py-4 px-6 text-xs font-extrabold text-[#224D59] uppercase tracking-wider">Assigned TPO</th>
@@ -210,6 +275,7 @@ const InternsPage = () => {
                           </div>
                         </div>
                       </td>
+                      <td className="py-4 px-6 text-sm font-bold text-[#224D59]">{intern.studentId}</td>
                       <td className="py-4 px-6 text-sm font-medium text-[#384022]/80">{intern.branch}</td>
                       <td className="py-4 px-6">
                         <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(intern.status)}`}>
@@ -219,10 +285,10 @@ const InternsPage = () => {
                       <td className="py-4 px-6 text-sm font-medium text-[#384022]/80">{intern.tpo}</td>
                       <td className="py-4 px-6 text-right">
                         <div className="flex justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button className="p-1.5 text-[#224D59]/60 hover:text-[#224D59] hover:bg-[#F5F7F2] rounded-lg transition-colors" title="Edit">
+                          <button    onClick={() => handleEditIntern(intern)} className="p-1.5 text-[#224D59]/60 hover:text-[#224D59] hover:bg-[#F5F7F2] rounded-lg transition-colors" title="Edit">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                           </button>
-                          <button className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
+                          <button    onClick={() => handleDeleteIntern(intern.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                           </button>
                         </div>
@@ -315,6 +381,16 @@ const InternsPage = () => {
                   />
                 </div>
                 <div>
+                  <label className="block text-xs font-bold text-[#224D59] uppercase tracking-wider mb-1">AITH ID</label>
+                  <input
+                    type="text"
+                    className="w-full bg-[#F5F7F2] border border-[#224D59]/10 rounded-xl px-4 py-2.5 text-sm text-[#224D59] outline-none focus:border-[#B8CC34] focus:ring-2 focus:ring-[#B8CC34]/20 transition-all"
+                    placeholder="e.g. 2101660100XXX"
+                    value={formData.studentId}
+                    onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
+                  />
+                </div>
+                <div>
                   <label className="block text-xs font-bold text-[#224D59] uppercase tracking-wider mb-1">Email Address</label>
                   <input
                     type="email"
@@ -376,7 +452,7 @@ const InternsPage = () => {
                     Cancel
                   </button>
                   <button
-                    onClick={handleAddIntern}
+                  onClick={handleSaveIntern}
                     disabled={isSaving}
                     className="flex-1 py-3 rounded-xl bg-[#B8CC34] text-[#224D59] font-bold text-sm hover:shadow-[0_0_15px_rgba(184,204,52,0.4)] transition-all disabled:opacity-70"
                   >

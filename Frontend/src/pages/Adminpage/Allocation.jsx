@@ -1,36 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import {  AnimatePresence,motion } from 'framer-motion';
 import AdminSidebar from '../../components/admin/Sidebar'; 
 import AdminHeader from '../../components/admin/Header';   
 
-// ==========================================
-// 🚀 FAKE FRONTEND API SERVICE (MOCK BACKEND)
-// ==========================================
-let mockCompanies = ["Google India", "Microsoft", "TCS Digital", "Amazon", "Atlassian"];
+import { getAdminInterns, assignAdminTPO, getTPOs } from '../../api/adminApi';
 
-let mockInterns = [
-  { id: 1, name: "Aarav Sharma", email: "aarav@example.com", branch: "B.Tech CSE", status: "Unassigned", tpo: "-" },
-  { id: 2, name: "Priya Singh", email: "priya@example.com", branch: "MCA", status: "Assigned", tpo: "Microsoft" },
-  { id: 3, name: "Rohan Verma", email: "rohan.v@example.com", branch: "B.Tech IT", status: "Unassigned", tpo: "-" },
-  { id: 4, name: "Neha Gupta", email: "neha.g@example.com", branch: "B.Tech CSE", status: "Unassigned", tpo: "-" },
-  { id: 5, name: "Karan Patel", email: "karan.p@example.com", branch: "B.Tech ECE", status: "Assigned", tpo: "Google India" },
-  { id: 6, name: "Sneha Roy", email: "sneha.r@example.com", branch: "B.Tech CSE", status: "Unassigned", tpo: "-" },
-];
-
-const apiService = {
-  getInterns: () => new Promise(resolve => setTimeout(() => resolve([...mockInterns]), 600)),
-  assignTPO: (internIds, companyName) => new Promise(resolve => setTimeout(() => {
-    // Agar naya naam hai toh mockCompanies list mein add kar do
-    if (!mockCompanies.includes(companyName)) {
-      mockCompanies.push(companyName);
-    }
-    
-    mockInterns = mockInterns.map(intern => 
-      internIds.includes(intern.id) ? { ...intern, tpo: companyName, status: "Assigned" } : intern
-    );
-    resolve([...mockInterns]);
-  }, 1000)),
-};
+// Remove the mock API service and use real APIs
 
 // ==========================================
 // 🚀 MAIN COMPONENT
@@ -40,50 +15,167 @@ const AllocationsPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   
   // Data States
+  const [tpos, setTpos] = useState([]);
   const [interns, setInterns] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   
   // Allocation States
   const [selectedInterns, setSelectedInterns] = useState([]);
-  const [selectedCompany, setSelectedCompany] = useState("");
+
+  const [selectedCompany, setSelectedCompany] = useState({
+    id: "",
+    name: ""
+  });// ✅ FIXED: Proper object structure
   const [isAssigning, setIsAssigning] = useState(false);
 
   // Autocomplete UI States
   const [showSuggestions, setShowSuggestions] = useState(false);
+
+
   const wrapperRef = useRef(null);
 
+
+
+
+  const fetchInterns = async () => {
+
+    setIsLoading(true);
+  
+    try {
+  
+      const response = await getAdminInterns();
+  
+      if (response?.success) {
+        const mappedInterns = response.interns.map(
+          (intern) => ({
+            ...intern,
+            id: intern._id,
+          })
+        );
+        setInterns(mappedInterns);
+      }
+  
+    } catch (error) {
+  
+      console.error("Failed to fetch interns", error);
+  
+    } finally {
+  
+      setIsLoading(false);
+  
+    }
+  };
+  
+  const fetchTPOs = async () => {
+  
+    try {
+  
+      const response = await getTPOs();
+  
+      console.log("FULL API RESPONSE:", response);
+  
+      if (response?.success) {
+        setTpos(response.tpos || []);
+      }
+  
+    } catch (error) {
+  
+      console.error("Failed to fetch TPOs", error);
+  
+    }
+  };
+  
   useEffect(() => {
+  
     fetchInterns();
-    
-    // Click outside to close suggestions
+    fetchTPOs();
+  
     const handleClickOutside = (event) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+  
+      if (
+        wrapperRef.current &&
+        !wrapperRef.current.contains(event.target)
+      ) {
         setShowSuggestions(false);
       }
     };
+  
+    
+  
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const fetchInterns = async () => {
-    setIsLoading(true);
-    const data = await apiService.getInterns();
-    setInterns(data);
-    setIsLoading(false);
-  };
 
-  // Select / Deselect Logic
+  
+  // ==========================================
+  // 🔍 FILTERS & DERIVED DATA
+  // ==========================================
+  const filteredInterns = interns.filter(intern =>
+    (intern.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (intern.studentId || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (intern.branch || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    ((intern.tpoIds || []).some(tpo => tpo.instituteName?.toLowerCase().includes(searchQuery.toLowerCase())))
+  );
+
+  const uniqueCompanies = tpos.map(tpo => ({
+    id: tpo.id || tpo._id,
+    name: tpo.instituteName
+  }));
+  
+  const filteredSuggestions = uniqueCompanies.filter(comp =>
+    comp.name.toLowerCase().includes(selectedCompany.name.toLowerCase())
+  );
+  
+
+  // ==========================================
+  // 🚀 SELECT ALL
+  // ==========================================
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      setSelectedInterns(filteredInterns.map(i => i.id));
+      setSelectedInterns(
+        filteredInterns.map((i) =>
+          String(i.id)
+        )
+      );
     } else {
       setSelectedInterns([]);
     }
   };
+  
+
+
+    // Click outside to close suggestions
+  //   const handleClickOutside = (event) => {
+  //     if (
+  //       wrapperRef.current &&
+  //       !wrapperRef.current.contains(
+  //         event.target
+  //       )
+  //     ) {
+  //       setShowSuggestions(false);
+  //     }
+  //   };
+
+  //   document.addEventListener(
+  //     "mousedown",
+  //     handleClickOutside
+  //   );
+
+  //   return () => {
+  //     document.removeEventListener(
+  //       "mousedown",
+  //       handleClickOutside
+  //     );
+  //   };
+  // }, []);
 
   const handleSelectOne = (id) => {
-    if (selectedInterns.includes(id)) {
-      setSelectedInterns(selectedInterns.filter(internId => internId !== id));
+    const idStr = String(id); // ✅ FIXED: Convert to string for consistent comparison
+    const selectedStr = selectedInterns.map(i => String(i));
+
+    if (selectedStr.includes(idStr)) {
+      setSelectedInterns(selectedInterns.filter(internId => String(internId) !== idStr));
     } else {
       setSelectedInterns([...selectedInterns, id]);
     }
@@ -91,19 +183,49 @@ const AllocationsPage = () => {
 
   // Bulk Assign Action
   const handleBulkAssign = async () => {
-    if (!selectedCompany.trim()) return alert("Please type or select an institute name!");
-    
+     // ✅ FIX: Validate selectedCompany is an object with id
+     if (!selectedCompany?.id) {
+      alert("❌ Please select a valid institute first!");
+      return;
+    }
+    if (selectedInterns.length === 0) {
+      alert("❌ Please select at least one intern to assign!");
+      return;
+    }
+
     setIsAssigning(true);
+   
+
+
     try {
-      // Use trimmed company name
-      const companyName = selectedCompany.trim();
-      const updatedData = await apiService.assignTPO(selectedInterns, companyName);
-      setInterns(updatedData);
-      setSelectedInterns([]); // Clear selection after success
-      setSelectedCompany("");
-      setShowSuggestions(false);
-    } catch (error) {
-      console.error("Assignment failed", error);
+      const payload = {
+        internIds: selectedInterns.map(String), // ✅ Ensure all IDs are strings
+        tpoId: selectedCompany.id
+      };
+  
+      console.log("🔥 FINAL PAYLOAD:", payload);
+  
+      const response = await assignAdminTPO(payload);
+  
+      console.log("✅ RESPONSE:", response);
+  
+      if (response?.success) {
+        alert("✅ Interns assigned successfully!");
+        setSelectedInterns([]);
+        
+        setSelectedCompany({
+          id: "",
+          name: "",
+        });
+
+        fetchInterns();
+      } else {
+        alert("❌ Assignment failed");
+      }
+  
+    } catch (err) {
+      console.error(err);
+      alert("❌ Server error while assigning");
     } finally {
       setIsAssigning(false);
     }
@@ -120,17 +242,6 @@ const AllocationsPage = () => {
       : 'bg-orange-100 text-orange-700 border-orange-200';
   };
 
-  // Main Page Search Filter
-  const filteredInterns = interns.filter(intern => 
-    intern.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    intern.branch.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    intern.tpo.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  // Autocomplete Filter Logic
-  const filteredSuggestions = mockCompanies.filter(comp => 
-    comp.toLowerCase().includes(selectedCompany.toLowerCase())
-  );
 
   return (
     <div className="flex h-screen bg-[#F5F7F2] font-sans overflow-hidden selection:bg-[#B8CC34] selection:text-[#224D59]">
@@ -201,9 +312,12 @@ const AllocationsPage = () => {
                     <div className="relative w-full sm:w-64">
                       <input 
                         type="text"
-                        value={selectedCompany}
+                        value={selectedCompany.name} // Support both object and string states
                         onChange={(e) => {
-                          setSelectedCompany(e.target.value);
+                          setSelectedCompany({
+                            id: "",
+                            name: e.target.value
+                          });
                           setShowSuggestions(true);
                         }}
                         onFocus={() => setShowSuggestions(true)}
@@ -213,7 +327,7 @@ const AllocationsPage = () => {
                       
                       {/* Dropdown Suggestions Panel */}
                       <AnimatePresence>
-                        {showSuggestions && selectedCompany.length > 0 && (
+                      {showSuggestions && selectedCompany.name && (
                           <motion.div 
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -225,12 +339,16 @@ const AllocationsPage = () => {
                                 <div 
                                   key={idx}
                                   onClick={() => {
-                                    setSelectedCompany(comp);
+                                    setSelectedCompany({
+                                      id: comp.id,
+                                      name: comp.name
+                                    });
+                                  
                                     setShowSuggestions(false);
                                   }}
                                   className="px-4 py-3 text-sm text-[#224D59] font-medium hover:bg-[#F5F7F2] cursor-pointer border-b border-gray-50 last:border-0"
                                 >
-                                  {comp}
+                                {comp.name}
                                 </div>
                               ))
                             ) : (
@@ -277,7 +395,10 @@ const AllocationsPage = () => {
                           <input 
                             type="checkbox" 
                             onChange={handleSelectAll}
-                            checked={selectedInterns.length === filteredInterns.length && filteredInterns.length > 0}
+                            checked={
+                              filteredInterns.length > 0 &&
+                              selectedInterns.length === filteredInterns.length
+                            }
                             className="w-4 h-4 accent-[#B8CC34] rounded cursor-pointer"
                           />
                         </th>
@@ -296,18 +417,23 @@ const AllocationsPage = () => {
                           <td className="py-4 px-6">
                             <input 
                               type="checkbox" 
-                              checked={selectedInterns.includes(intern.id)}
-                              onChange={() => handleSelectOne(intern.id)}
+                              checked={selectedInterns.includes(String(intern.id))} // ✅ FIXED: Ensure ID is treated as string
+                              onChange={() => handleSelectOne(String(intern.id))} // ✅ FIXED: Ensure ID is treated as string
                               className="w-4 h-4 accent-[#B8CC34] rounded cursor-pointer"
                             />
                           </td>
                           <td className="py-4 px-4">
                             <div className="flex items-center">
                               <div className="w-9 h-9 rounded-full bg-[#B8CC34]/20 text-[#224D59] font-bold flex items-center justify-center mr-3">
-                                {intern.name.charAt(0)}
+                                {(intern.name || "?").charAt(0)}
                               </div>
                               <div>
-                                <p className="text-sm font-bold text-[#224D59]">{intern.name}</p>
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm font-bold text-[#224D59]">{intern.name}</p>
+                                  <span className="text-[10px] font-black bg-[#224D59]/5 text-[#224D59]/40 px-1.5 py-0.5 rounded-md border border-[#224D59]/10">
+                                    {intern.studentId || "N/A"}
+                                  </span>
+                                </div>
                                 <p className="text-xs font-medium text-[#384022]/60">{intern.email}</p>
                               </div>
                             </div>
@@ -319,13 +445,17 @@ const AllocationsPage = () => {
                             </span>
                           </td>
                           <td className="py-4 px-6">
-                            <div className="flex items-center">
-                              {intern.tpo !== "-" && (
-                                <svg className="w-4 h-4 text-[#B8CC34] mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                            <div className="flex flex-col gap-1">
+                              {intern.tpoIds && intern.tpoIds.length > 0 ? (
+                                intern.tpoIds.map((tpo, idx) => (
+                                  <div key={idx} className="flex items-center text-xs font-bold text-[#224D59]">
+                                    <svg className="w-3 h-3 text-[#B8CC34] mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                                    {tpo.instituteName}
+                                  </div>
+                                ))
+                              ) : (
+                                <span className="text-sm font-bold text-gray-400">-</span>
                               )}
-                              <span className={`text-sm font-bold ${intern.tpo === "-" ? 'text-gray-400' : 'text-[#224D59]'}`}>
-                                {intern.tpo}
-                              </span>
                             </div>
                           </td>
                         </tr>
@@ -350,13 +480,14 @@ const AllocationsPage = () => {
                     <motion.div 
                       key={intern.id} 
                       variants={itemVariants} 
-                      onClick={() => handleSelectOne(intern.id)}
+                      onClick={() => handleSelectOne(String(intern.id))}
                       className={`backdrop-blur-xl border rounded-2xl p-4 shadow-sm relative cursor-pointer transition-colors ${selectedInterns.includes(intern.id) ? 'bg-[#B8CC34]/10 border-[#B8CC34]' : 'bg-white/80 border-[#224D59]/10'}`}
                     >
                       <div className="absolute top-4 right-4">
                         <input 
                           type="checkbox" 
-                          checked={selectedInterns.includes(intern.id)}
+                          checked={selectedInterns.includes(String(intern.id))} // ✅ FIXED: Ensure ID is treated as string
+                          onChange={() => handleSelectOne(String(intern.id))} // ✅ FIXED: Ensure ID is treated as string   
                           readOnly
                           className="w-5 h-5 accent-[#B8CC34] rounded cursor-pointer pointer-events-none"
                         />
@@ -364,10 +495,15 @@ const AllocationsPage = () => {
 
                       <div className="flex items-center mb-3 pr-8">
                         <div className="w-10 h-10 rounded-full bg-[#B8CC34]/20 text-[#224D59] font-bold flex items-center justify-center mr-3 flex-shrink-0">
-                          {intern.name.charAt(0)}
+                          {(intern.name || "?").charAt(0)}
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-[#224D59]">{intern.name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-bold text-[#224D59]">{intern.name}</p>
+                            <span className="text-[10px] font-black bg-[#224D59]/5 text-[#224D59]/40 px-1.5 py-0.5 rounded-md border border-[#224D59]/10">
+                              {intern.studentId || "N/A"}
+                            </span>
+                          </div>
                           <p className="text-[11px] font-medium text-[#384022]/60">{intern.email}</p>
                         </div>
                       </div>
@@ -380,9 +516,9 @@ const AllocationsPage = () => {
                           </span>
                         </div>
                         <div className="text-right">
-                          <p className="text-[10px] uppercase font-bold text-[#384022]/50">Assignment</p>
-                          <p className={`text-xs font-bold mt-0.5 truncate ${intern.tpo === "-" ? 'text-gray-400' : 'text-[#224D59]'}`}>
-                            {intern.tpo}
+                          <p className="text-[10px] uppercase font-bold text-[#384022]/50">Assignments</p>
+                          <p className={`text-xs font-bold mt-0.5 truncate ${(!intern.tpoIds || intern.tpoIds.length === 0) ? 'text-gray-400' : 'text-[#224D59]'}`}>
+                            {intern.tpoIds && intern.tpoIds.length > 0 ? intern.tpoIds.map(t => t.instituteName).join(", ") : "-"}
                           </p>
                         </div>
                       </div>

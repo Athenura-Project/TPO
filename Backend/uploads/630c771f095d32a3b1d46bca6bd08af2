@@ -1,0 +1,4 @@
+name,email,phone,branch,status,password
+Rahul Kumar,rahul.demo1@local.dev,9876543210,B.Tech CSE,Active,Pass@123
+Anita Singh,anita.demo1@local.dev,9876500000,MCA,Pending,
+Vikram Patel,vikram.demo1@local.dev,9898989898,B.Tech IT,Placed,Intern@123

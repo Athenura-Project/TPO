@@ -1,10 +1,6 @@
-import internsModels from "../models/interns.models.js";
-// import { ComparePassword, HashPassword } from "../services/password.service.js";
-// import { GenerateToken } from "../services/token.service.js";
-// import { validateLogin, validateRegister } from "../validators/authValidator.js";
-
+import internsModels from "../models/internsadmin.models.js";
 import jwt from "jsonwebtoken";
-import config from "../config/env.js"; // ✅ add this
+import config from "../config/env.js";
 import OTP from "../models/OTP.js";
 import bcrypt from "bcrypt";
 import otpGenerator from "otp-generator";
@@ -18,227 +14,7 @@ const generateToken = (payload) => {
       process.env.JWT_SECRET || "secret123",
       { expiresIn: "7d" }
     );
-  };
-
-
-
-// // 🔹 Register Admin
-// const registerAdmin = async (req, res) => {      // ← function starts here
-//     try {
-//         const { name, email, password, adminSecret } = req.body;
-
-//         // ✅ check admin secret
-//         if (adminSecret !== config.ADMIN_SECRET) {
-//           return res.status(403).json({
-//             success: false,
-//             message: "Invalid admin secret key",
-//           });
-//         }
-
-//         const error = validateRegister({ name, email, password });
-//         if (error) {
-//             return res.status(400).json({ success: false, message: error });
-//         }
-
-//         const existingUser = await internsModels.findOne({ email });
-//         if (existingUser) {
-//           return res.status(400).json({
-//             success: false,
-//             message: "Email already registered",
-//           });
-//         }
-
-
-//         const hashPassword = await bcrypt.hash(password, 10);
-
-//         const admin = await internsModels.create({
-//             name,
-//             email,
-//             password: hashPassword,
-//             role: "admin",
-//         });
-
-//         const token = await GenerateToken({
-//             id: admin._id,
-//             role: admin.role,
-//             email: admin.email,
-//         });
-
-//         res.status(201).json({
-//             success: true,
-//             message: "Admin registered successfully",
-//             token,
-//             user: admin,
-//         });
-
-//     } catch (error) {
-//         console.error("Register error:", error);
-//         res.status(500).json({ success: false, message: "Server error" });
-//     }
-// };                                               // ← function ends here
-
-// // 🔹 Login
-// const login = async (req, res) => {
-//     try {
-//         const { email, password } = req.body;
-
-//         const error = validateLogin({ email, password });
-//         if (error) {
-//             return res.status(400).json({ success: false, message: error });
-//         }
-
-//         const existingUser = await internsModels.findOne({ email });
-//         if (!existingUser) {
-//             return res.status(400).json({ success: false, message: "Invalid email or password" });
-//         }
-
-//         const isMatch = await bcrypt.compare(password, existingUser.password);
-//         if (!isMatch) {
-//             return res.status(400).json({ success: false, message: "Invalid email or password" });
-//         }
-
-//         const token = await GenerateToken({
-//             id: existingUser._id,
-//             role: existingUser.role,
-//             email: existingUser.email,
-//         });
-
-//         res.status(200).json({
-//             success: true,
-//             message: "Login successful",
-//             token,
-//             user: existingUser,
-//         });
-
-//     } catch (error) {
-//         console.error("Login error:", error);
-//         res.status(500).json({ success: false, message: "Server error during login" });
-//     }
-// };
-
-
-
-
-
-
-
-// ================= LOGIN =================
-// export const login = async (req, res) => {
-//   try {
-//     const { email, password } = req.body;
-
-//     const user = await internsModels.findOne({ email });
-
-//     if (!user) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "User not found",
-//       });
-//     }
-
-//     if (!email || !password) {
-//         return res.status(400).json({
-//           success: false,
-//           message: "Email and password required",
-//         });
-//       }
-
-//     const match = await bcrypt.compare(password, user.password);
-
-//     if (!match) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Wrong password",
-//       });
-//     }
-
-//     const token = generateToken({
-//       id: user._id,
-//       role: user.role,
-//       email: user.email,
-//     });
-
-//     res.json({
-//       success: true,
-//       message: "Login successful",
-//       token,
-//       user,
-//     });
-
-//   } catch (error) {
-//     console.error("🔥 Login error:", error.message);
-//     res.status(500).json({
-//       success: false,
-//       message: error.message,
-//     });
-//   }
-// };
-
-
-
-
-
-
-
-
-
-
-// ================= ADMIN REGISTER =================
-// export const registerAdmin = async (req, res) => {
-//   try {
-//     const { name, email, password, adminSecret } = req.body;
-
-
-//     // ✅ check secret
-//     if (adminSecret !== config.ADMIN_SECRET) {
-//       return res.status(403).json({
-//         success: false,
-//         message: "Invalid admin secret",
-//       });
-//     }
-
-//     // ✅ check existing
-//     const exist = await internsModels.findOne({ email });
-//     if (exist) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Email already exists",
-//       });
-//     }
-
-//     // ✅ generate OTP
-//     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-//     const hashPassword = await bcrypt.hash(password, 10);
-
-//     const admin = await internsModels.create({
-//       name,
-//       email,
-//       password: hashPassword,
-//       role: "admin",
-//       isVerified: true,
-//     });
-
-//     const token = generateToken({
-//       id: admin._id,
-//       role: "admin",
-//     });
-
-//     res.json({
-//       success: true,
-//       message: "Admin registered",
-//       token,
-//       user: admin,
-//     });
-
-//   } catch (error) {
-//     console.error("Admin error:", error);
-//     res.status(500).json({
-//       success: false,
-//       message: error.message,
-//     });
-//   }
-// };
+};
 
 export const registerAdmin = async (req, res) => {
     try {
@@ -351,6 +127,99 @@ export const registerAdmin = async (req, res) => {
 
 
 
+  // export const sendOTP = async (req, res) => {
+  //   try {
+  //     const { email } = req.body;
+  
+  //     const existingUser = await internsModels.findOne({ email });
+  //     if (existingUser) {
+  //       return res.status(400).json({
+  //         success: false,
+  //         message: "User already registered",
+  //       });
+  //     }
+  
+  //     const otp = otpGenerator.generate(6, {
+  //       digits: true,
+  //       upperCaseAlphabets: false,
+  //       lowerCaseAlphabets: false,
+  //       specialChars: false,
+  //     });
+  
+
+  //     console.log("Generated OTP:", otp);
+
+
+  //     await sendOTPEmail(email, otp);
+  
+  //     await OTP.deleteMany({ email }); // ✅ first delete
+  //     await OTP.create({ email, otp }); // ✅ then save
+  
+  //     res.json({
+  //       success: true,
+  //       message: "OTP sent successfully",
+  //     });
+  
+  //   } catch (error) {
+  //     console.error("sendOTP error:", error);
+  //     res.status(500).json({
+  //       success: false,
+  //       message: error.message,
+  //     });
+  //   }
+  // };
+
+
+
+  export const verifyOTP = async (req, res) => {
+    try {
+      const { email, otp, name, password } = req.body;
+  
+      const otpRecord = await OTP.findOne({ email, otp });
+  
+      if (!otpRecord) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid OTP",
+        });
+      }
+  
+      // optional expiry check (recommended)
+      const timeDiff = Date.now() - otpRecord.createdAt;
+      if (timeDiff > 10 * 60 * 1000) {
+        return res.status(400).json({
+          success: false,
+          message: "OTP expired",
+        });
+      }
+  
+      const hashedPassword = await bcrypt.hash(password, 10);
+  
+      const user = await internsModels.create({
+        name,
+        email,
+        password: hashedPassword,
+        role: "admin",
+      });
+  
+      await OTP.deleteMany({ email });
+  
+      return res.json({
+        success: true,
+        message: "Admin registered successfully",
+        user,
+      });
+  
+    } catch (error) {
+      console.error("OTP verify error:", error);
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  };
+
+
   export const sendOTP = async (req, res) => {
     try {
       const { email } = req.body;
@@ -370,30 +239,57 @@ export const registerAdmin = async (req, res) => {
         specialChars: false,
       });
   
-      await sendOTPEmail(email, otp);
+      console.log("Generated OTP:", otp);
   
-      await OTP.deleteMany({ email }); // ✅ first delete
-      await OTP.create({ email, otp }); // ✅ then save
+      // 🔥 IMPORTANT: check email sending result
+      const info = await sendOTPEmail(email, otp);
   
-      res.json({
+      console.log("EMAIL INFO:", info);
+  
+      await OTP.deleteMany({ email });
+      await OTP.create({ email, otp });
+  
+      return res.json({
         success: true,
         message: "OTP sent successfully",
       });
   
     } catch (error) {
       console.error("sendOTP error:", error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: error.message,
       });
     }
   };
 
+  export const testEmail = async (req, res) => {
+    try {
+      const result = await sendOTPEmail(
+        "your_test_email@gmail.com",
+        "123456"
+      );
+  
+      res.json({ success: true, result });
+  
+    } catch (err) {
+      console.log("TEST EMAIL ERROR:", err.response?.data || err.message);
+  
+      res.status(500).json({
+        success: false,
+        error: err.response?.data || err.message
+      });
+    }
+  };
 
   export const login = async (req, res) => {
     try {
+      
+      console.log("LOGIN BODY:", req.body); // 👈 add this
       const { email, password } = req.body;
   
+
+      // 1. Validate input
       if (!email || !password) {
         return res.status(400).json({
           success: false,
@@ -401,15 +297,29 @@ export const registerAdmin = async (req, res) => {
         });
       }
   
-      const user = await internsModels.findOne({ email });
-  
+      // 2. IMPORTANT: include password explicitly
+      const user = await internsModels
+        .findOne({ email })
+        .select("+password"); // 🔥 FIX
+
+        // 3. Check user exists
       if (!user) {
         return res.status(400).json({
           success: false,
           message: "User not found",
         });
       }
-  
+
+      
+      // 4. Check password exists (extra safety)
+      if (!user.password) {
+        return res.status(500).json({
+          success: false,
+          message: "Password not found in database",
+        });
+      }
+
+      // 5. Compare password safely
       const match = await bcrypt.compare(password, user.password);
   
       if (!match) {
@@ -418,18 +328,25 @@ export const registerAdmin = async (req, res) => {
           message: "Wrong password",
         });
       }
-  
+
+      // 6. Generate token
       const token = generateToken({
         id: user._id,
         role: user.role,
         email: user.email,
       });
   
-      res.json({
+
+      // 7. Remove password before sending response
+      const safeUser = user.toObject();
+      delete safeUser.password;
+
+
+       return res.json({
         success: true,
         message: "Login successful",
         token,
-        user,
+            user: safeUser,
       });
   
     } catch (error) {
@@ -527,123 +444,5 @@ export const registerAdmin = async (req, res) => {
 
 
 
-
-
-
-// ================= SEND OTP =================
-// export const sendOTP = async (req, res) => {
-//   try {
-//     const { email } = req.body;
-
-//     const existingUser = await internsModels.findOne({ email });
-//     if (existingUser) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "User already registered",
-//       });
-//     }
-
-//     const otp = otpGenerator.generate(6, {
-//       digits: true,
-//       upperCaseAlphabets: false,
-//       lowerCaseAlphabets: false,
-//       specialChars: false,
-//     });
-
-//     // ✅ send email (FIXED)
-//     await sendOTPEmail(email, otp);
-
-//     // save OTP
-//     await OTP.create({ email, otp });
-//     await OTP.deleteMany({ email });
-
-//     res.status(200).json({
-//       success: true,
-//       message: "OTP sent successfully",
-//     });
-   
-
-//   } catch (error) {
-//     console.error("sendOTP error:", error);
-//     res.status(500).json({
-//       success: false,
-//       message: error.message,
-//     });
-//   }
-// };
-
-
-// ================= SIGNUP (OTP VERIFY) =================
-
-// export const signup = async (req, res) => {
-//     try {
-//       const { name, email, password, otp } = req.body;
-  
-//       // ✅ check required fields
-//       if (!name || !email || !password || !otp) {
-//         return res.status(400).json({
-//           success: false,
-//           message: "All fields are required",
-//         });
-//       }
-  
-//       // ✅ check if user already exists
-//       const existingUser = await internsModels.findOne({ email });
-//       if (existingUser) {
-//         return res.status(400).json({
-//           success: false,
-//           message: "User already exists",
-//         });
-//       }
-  
-//       // ✅ get latest OTP
-//       const recentOTP = await OTP.find({ email })
-//         .sort({ createdAt: -1 })
-//         .limit(1);
-  
-//       if (!recentOTP.length) {
-//         return res.status(400).json({
-//           success: false,
-//           message: "OTP expired or not found",
-//         });
-//       }
-  
-//       // ✅ compare OTP (string safe)
-//       if (recentOTP[0].otp !== String(otp)) {
-//         return res.status(400).json({
-//           success: false,
-//           message: "Invalid OTP",
-//         });
-//       }
-  
-//       // ✅ hash password
-//       const hashedPassword = await bcrypt.hash(password, 10);
-  
-//       // ✅ create user
-//       const user = await internsModels.create({
-//         name,
-//         email,
-//         password: hashedPassword,
-//         role: "user",
-//         isVerified: true,
-//       });
-  
-//       // ✅ delete OTP after use (VERY IMPORTANT)
-//       await OTP.deleteMany({ email });
-  
-//       res.status(200).json({
-//         success: true,
-//         message: "Signup successful",
-//         user,
-//       });
-  
-//     } catch (error) {
-//       console.error("Signup error:", error);
-//       res.status(500).json({
-//         success: false,
-//         message: error.message,
-//       });
-//     }
-//   };
 
 
