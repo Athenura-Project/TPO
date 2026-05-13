@@ -26,7 +26,8 @@ import {
 
     // Bulk import
     bulkImport,
-
+    bulkAssignTPOsToIntern,
+    getUnassignedTPOsForIntern,
     
     // Analytics
     getAnalytics,
@@ -125,6 +126,13 @@ router.get("/analytics/overall", auth, adminOnly, getAnalytics);
 
 // Get specific intern analytics
 router.get("/analytics/intern/:id", auth, adminOnly, getInternAnalytics);
+
+
+
+router.post('/assign-tpos-to-intern', auth, bulkAssignTPOsToIntern);
+
+// Get unassigned TPOs for an intern
+router.get('/intern/:internId/unassigned-tpos', auth, getUnassignedTPOsForIntern);
 
 
 /* -------------------- NOTIFICATIONS -------------------- */

@@ -203,15 +203,6 @@ function App() {
           />
 
           <Route
-            path="/admin/allocation"
-            element={
-              <ProtectedRoute>
-                <AdminAllocation />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
             path="/admin/analytics"
             element={
               <ProtectedRoute>

@@ -1354,3 +1354,184 @@ async function updatePerformanceMetrics(internId) {
     }
   }
 
+// ✅ Bulk assign multiple TPOs to a single intern
+export const bulkAssignTPOsToIntern = async (req, res) => {
+    try {
+        const { internId, tpoIds } = req.body;
+
+        console.log(req.body)
+        // Validate Intern ID
+        if (!mongoose.Types.ObjectId.isValid(internId)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Invalid Intern ID" 
+            });
+        }
+
+        // Validate TPO IDs
+        if (!Array.isArray(tpoIds) || tpoIds.length === 0) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "At least one TPO ID is required" 
+            });
+        }
+
+        // Check if intern exists
+        const intern = await internsModels.findById(internId);
+        if (!intern) {
+            return res.status(404).json({ 
+                success: false, 
+                message: "Intern not found" 
+            });
+        }
+
+        // Validate all TPO IDs
+        const validTPOs = await TPO.find({ 
+            _id: { $in: tpoIds } 
+        });
+
+        if (validTPOs.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                message: "No valid TPOs found" 
+            });
+        }
+
+        const validTPOIds = validTPOs.map(tpo => tpo._id);
+        let assignedCount = 0;
+        let skippedCount = 0;
+
+        // Process each TPO
+        for (const tpo of validTPOs) {
+            // Check if assignment already exists
+            const existingAssignment = await Assignment.findOne({
+                internId: intern._id,
+                tpoId: tpo._id
+            });
+
+            if (existingAssignment) {
+                skippedCount++;
+                continue;
+            }
+
+            // Create assignment record
+            await Assignment.create({
+                internId: intern._id,
+                tpoId: tpo._id,
+                assignedBy: req.user?._id || null,
+                assignedDate: new Date()
+            });
+
+            // Add TPO to intern's tpoIds array (if not already there)
+            if (!intern.tpoIds.includes(tpo._id)) {
+                await internsModels.findByIdAndUpdate(intern._id, {
+                    $addToSet: { tpoIds: tpo._id }
+                });
+            }
+
+            // Add intern to TPO's assignedInterns array
+            if (!tpo.assignedInterns || !tpo.assignedInterns.includes(intern._id)) {
+                await TPO.findByIdAndUpdate(tpo._id, {
+                    $addToSet: { assignedInterns: intern._id }
+                });
+            }
+
+            // Update TPO student count
+            const totalAssignments = await Assignment.countDocuments({ tpoId: tpo._id });
+            await TPO.findByIdAndUpdate(tpo._id, { 
+                studentsRegistered: totalAssignments 
+            });
+
+            // Create notification for intern
+            await Notification.create({
+                recipientId: intern._id,
+                title: "New TPO Assignment",
+                message: `You have been assigned to ${tpo.instituteName}`,
+                type: "assignment",
+                relatedTPO: tpo._id
+            });
+
+            assignedCount++;
+        }
+
+        // Update intern status if they have assignments
+        if (assignedCount > 0) {
+            await internsModels.findByIdAndUpdate(internId, {
+                status: "Assigned"
+            });
+        }
+
+        // Update performance metrics
+        await updatePerformanceMetrics(internId);
+
+        res.json({
+            success: true,
+            message: `${assignedCount} TPO(s) assigned successfully${skippedCount > 0 ? ` (${skippedCount} already assigned)` : ''}`,
+            data: {
+                assignedCount,
+                skippedCount,
+                intern: {
+                    id: intern._id,
+                    name: intern.name,
+                    email: intern.email
+                },
+                assignedTPOs: validTPOs.map(tpo => ({
+                    id: tpo._id,
+                    instituteName: tpo.instituteName
+                }))
+            }
+        });
+
+    } catch (error) {
+        console.error("bulkAssignTPOsToIntern error:", error);
+        res.status(500).json({
+            success: false,
+            message: error.message || "Failed to assign TPOs to intern"
+        });
+    }
+};
+
+// ✅ Get unassigned TPOs for a specific intern
+export const getUnassignedTPOsForIntern = async (req, res) => {
+    try {
+        const { internId } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(internId)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Invalid Intern ID" 
+            });
+        }
+
+        // Get all TPOs
+        const allTPOs = await TPO.find().select("_id instituteName tpoName email status");
+
+        // Get already assigned TPO IDs for this intern
+        const assignments = await Assignment.find({ 
+            internId: internId 
+        }).select("tpoId");
+
+        const assignedTPOIds = assignments.map(a => a.tpoId.toString());
+
+        // Filter unassigned TPOs
+        const unassignedTPOs = allTPOs.filter(tpo => 
+            !assignedTPOIds.includes(tpo._id.toString())
+        );
+
+        res.json({
+            success: true,
+            internId,
+            totalTPOs: allTPOs.length,
+            assignedCount: assignedTPOIds.length,
+            unassignedCount: unassignedTPOs.length,
+            unassignedTPOs
+        });
+
+    } catch (error) {
+        console.error("getUnassignedTPOsForIntern error:", error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};

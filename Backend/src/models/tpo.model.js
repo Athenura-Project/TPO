@@ -52,14 +52,14 @@ const tpoSchema = new mongoose.Schema({
       "Rejected",
       "Assigned"
     ],
-    default: "Not Contacted"
+    default: "New"
   },
   
 
   contactMethod: {
     type: String,
     enum: ["Email", "Phone", "Both", ""],
-    default: ""
+    default: "Both"
   },
   currentAssignment: {
     type: mongoose.Schema.Types.ObjectId,

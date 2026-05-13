@@ -26,7 +26,7 @@ const InternsPage = () => {
     email: '',
     phone: '',
     password: '',
-    branch: 'B.Tech CSE',
+    branch: 'HR',
     status: "Active",
     studentId: '', // ✅ ADDED
   });
@@ -95,7 +95,7 @@ const InternsPage = () => {
       email: '',
       phone: '',
       password: '',
-      branch: 'B.Tech CSE',
+      branch: 'HR',
       status: 'Active',
       studentId: '', // ✅ ADDED
     });
@@ -134,7 +134,7 @@ const handleEditIntern = (intern) => {
     email: intern.email || "",
     phone: intern.phone || "",
     password: "",
-    branch: intern.branch || "B.Tech CSE",
+    branch: intern.branch || "HR",
     status: intern.status || "Active",
     studentId: intern.studentId || "", // ✅ ADDED
   });
@@ -428,10 +428,9 @@ const handleDeleteIntern = async (id) => {
                       value={formData.branch}
                       onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
                     >
-                      <option>B.Tech CSE</option>
-                      <option>B.Tech IT</option>
-                      <option>B.Tech ECE</option>
-                      <option>MCA</option>
+                      <option>HR</option>
+                      <option>Sales</option>
+                      <option>BDE</option>
                     </select>
                   </div>
                   <div>

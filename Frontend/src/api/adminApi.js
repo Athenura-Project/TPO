@@ -50,6 +50,25 @@ const parseJsonSafely = async (response) => {
   }
 };
 
+export const bulkAssignTPOsToIntern = async (data) => {
+  return request("/admin/assign-tpos-to-intern", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...buildHeaders(),
+    },
+    body: JSON.stringify(data),
+  });
+};
+
+export const getUnassignedTPOsForIntern = async (internId) => {
+  if (!internId) throw new Error("Intern ID is required");
+  
+  return request(`/admin/intern/${internId}/unassigned-tpos`, {
+    headers: buildHeaders(),
+  });
+};
+
 
 const request = async (path, options = {}) => {
   try {

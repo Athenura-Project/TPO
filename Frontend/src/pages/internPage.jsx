@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../utils/api";
+import BulkEmailModal from "../components/modals/BulkEmailModal";
 
 // Components
 import StatCard from "../components/dashboard/StatCard";
@@ -11,11 +12,10 @@ import AddTPOModal from "../components/modals/AddTPOModal";
 import Navbar from "../components/dashboard/Navbar";
 import Sidebar, { Icons } from "../components/dashboard/Sidebar";
 
-
 const InternDashboard = () => {
   const navigate = useNavigate();
 
-   // ✅ Decode user from JWT
+  // ✅ Decode user from JWT
   const user = (() => {
     try {
       const token = localStorage.getItem("token");
@@ -35,9 +35,9 @@ const InternDashboard = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [activePage, setActivePage] = useState("dashboard");
-
-  // Decode user from JWT
-
+  const [selectedTPOsForEmail, setSelectedTPOsForEmail] = useState([]);
+  const [isBulkEmailModalOpen, setIsBulkEmailModalOpen] = useState(false);
+  const [emailStatus, setEmailStatus] = useState({});
 
   // Fetch all data 
   const fetchAll = useCallback(async () => {
@@ -61,8 +61,24 @@ const InternDashboard = () => {
     }
   }, [navigate]);
 
+  const fetchEmailStatus = useCallback(async () => {
+    try {
+      const response = await api.get("/intern/email-status");
+      if (response.data.success) {
+        const statusMap = {};
+        response.data.data.forEach(item => {
+          statusMap[item.id] = item;
+        });
+        setEmailStatus(statusMap);
+      }
+    } catch (err) {
+      console.error("Error fetching email status:", err);
+    }
+  }, []);
+
   useEffect(() => {
     fetchAll();
+    fetchEmailStatus();
     // Poll notifications every 30 seconds as per the spec
     const interval = setInterval(async () => {
       try {
@@ -75,7 +91,7 @@ const InternDashboard = () => {
       }
     }, 30000);
     return () => clearInterval(interval);
-  }, [fetchAll]);
+  }, [fetchAll, fetchEmailStatus]);
 
   // Derived stats 
   const stats = {
@@ -113,9 +129,9 @@ const InternDashboard = () => {
   const fmtDate = (d) =>
     d
       ? new Date(d).toLocaleDateString("en-IN", {
-          day: "2-digit",
-          month: "short",
-        })
+        day: "2-digit",
+        month: "short",
+      })
       : "—";
 
   const greet = () => {
@@ -131,7 +147,6 @@ const InternDashboard = () => {
 
   const handleMarkRead = async (id) => {
     try {
-      // PUT /api/intern/notifications/:id/read
       await api.put(`/intern/notifications/${id}/read`);
       setNotifications((prev) =>
         prev.map((n) => (n._id === id ? { ...n, isRead: true } : n)),
@@ -151,28 +166,52 @@ const InternDashboard = () => {
     setUnreadCount(0);
   };
 
+  // Delete TPO handler
+  const handleDeleteTPO = async (tpoId) => {
+    if (!confirm("Are you sure you want to delete this TPO? This action cannot be undone.")) {
+      return;
+    }
 
-  // ✅ Add this new handler function
-const handleDeleteTPO = async (tpoId) => {
-  if (!confirm("Are you sure you want to delete this TPO? This action cannot be undone.")) {
-    return;
-  }
+    try {
+      await api.delete(`/intern/tpos/${tpoId}`);
+      setTpos((prev) => prev.filter((t) => t._id !== tpoId));
+    } catch (err) {
+      console.error("Error deleting TPO:", err);
+      alert("Failed to delete TPO: " + (err.response?.data?.message || err.message));
+    }
+  };
 
-  try {
-    await api.delete(`/intern/tpos/${tpoId}`);
-    // Remove from state
-    setTpos((prev) => prev.filter((t) => t._id !== tpoId));
-  } catch (err) {
-    console.error("Error deleting TPO:", err);
-    alert("Failed to delete TPO: " + (err.response?.data?.message || err.message));
-  }
-};
+  // Send single email handler
+  const handleSendSingleEmail = async (tpo) => {
+    if (!tpo.email) {
+      alert("This TPO doesn't have an email address");
+      return;
+    }
 
-const handleLogout = () => {
-  localStorage.removeItem("token");
-  localStorage.removeItem("role"); // 🔥 IMPORTANT
-  navigate("/login");
-};
+    const subject = prompt("Enter email subject:", "TPO Collaboration Opportunity");
+    if (!subject) return;
+
+    const message = prompt("Enter your message:", `Dear ${tpo.tpoName || 'TPO'},\n\nWe are excited to connect with ${tpo.instituteName} for potential collaboration opportunities.`);
+    if (!message) return;
+
+    try {
+      await api.post("/intern/send-email", {
+        tpoId: tpo._id,
+        subject,
+        message
+      });
+      alert(`✅ Email sent successfully to ${tpo.instituteName}`);
+      fetchEmailStatus();
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to send email");
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    navigate("/login");
+  };
 
   const FILTERS = [
     "All",
@@ -184,6 +223,7 @@ const handleLogout = () => {
     "Converted",
     "Rejected",
   ];
+  
   const filteredTpos =
     activeFilter === "All"
       ? tpos
@@ -215,12 +255,12 @@ const handleLogout = () => {
   return (
     <div className="min-h-screen bg-[#F5F7F2] flex flex-col font-sans selection:bg-[#224D59] selection:text-[#F5F7F2]">
       {/* TOP NAVBAR */}
-
       <Navbar
         user={user}
         unreadCount={unreadCount}
         setActivePage={setActivePage}
       />
+      
       <div className="flex flex-1">
         {/* SIDEBAR */}
         <Sidebar
@@ -229,10 +269,11 @@ const handleLogout = () => {
           unreadCount={unreadCount}
           stats={stats}
           setShowAddModal={setShowAddModal}
-          user={user} 
+          user={user}
           onLogout={handleLogout}
         />
-        {/* MAIN CONTENT  */}
+        
+        {/* MAIN CONTENT */}
         <main className="flex-1 p-5 lg:p-7 flex flex-col gap-6 min-w-0 overflow-x-hidden">
           {/* DASHBOARD */}
           {activePage === "dashboard" && (
@@ -258,9 +299,29 @@ const handleLogout = () => {
                     )}
                   </p>
                 </div>
+                
+                {/* Bulk Email Button */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      if (tpos.length === 0) {
+                        alert("No TPOs available to email");
+                        return;
+                      }
+                      setSelectedTPOsForEmail(tpos);
+                      setIsBulkEmailModalOpen(true);
+                    }}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#B8CC34] to-[#A5B82E] text-[#224D59] text-sm font-bold rounded-xl hover:shadow-[0_8px_20px_rgba(184,204,52,0.3)] transition-all duration-300 hover:-translate-y-0.5"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                    </svg>
+                    Bulk Email All
+                  </button>
+                </div>
               </div>
 
-              {/* Stat Cards  */}
+              {/* Stat Cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
                   label="Assigned"
@@ -309,11 +370,10 @@ const handleLogout = () => {
                         <button
                           key={f}
                           onClick={() => setActiveFilter(f)}
-                          className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-all duration-200 ${
-                            activeFilter === f
+                          className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-all duration-200 ${activeFilter === f
                               ? "bg-[#224D59] text-white border-[#224D59] shadow-sm"
                               : "bg-white text-[#384022]/50 border-[#224D59]/10 hover:border-[#224D59]/30"
-                          }`}
+                            }`}
                         >
                           {f === "Follow-up Required" ? "Follow-up" : f}
                         </button>
@@ -325,27 +385,30 @@ const handleLogout = () => {
                     <table className="w-full">
                       <thead>
                         <tr className="bg-[#F5F7F2]/40">
-                          {[
-                            "College / Contact",
-                            "Phone",
-                            "Method",
-                            "Status",
-                            "Follow-up",
-                            "",
-                          ].map((h) => (
-                            <th
-                              key={h}
-                              className="text-left text-[9px] font-black text-[#384022]/35 uppercase tracking-[0.1em] px-5 py-3"
-                            >
-                              {h}
-                            </th>
-                          ))}
+                          <th className="text-left text-[9px] font-black text-[#384022]/35 uppercase tracking-[0.1em] px-5 py-3">
+                            College / Contact
+                          </th>
+                          <th className="text-left text-[9px] font-black text-[#384022]/35 uppercase tracking-[0.1em] px-5 py-3">
+                            Phone
+                          </th>
+                          <th className="text-left text-[9px] font-black text-[#384022]/35 uppercase tracking-[0.1em] px-5 py-3">
+                            Method
+                          </th>
+                          <th className="text-left text-[9px] font-black text-[#384022]/35 uppercase tracking-[0.1em] px-5 py-3">
+                            Status
+                          </th>
+                          <th className="text-left text-[9px] font-black text-[#384022]/35 uppercase tracking-[0.1em] px-5 py-3">
+                            Follow-up
+                          </th>
+                          <th className="text-left text-[9px] font-black text-[#384022]/35 uppercase tracking-[0.1em] px-5 py-3">
+                            Actions
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         {filteredTpos.length === 0 ? (
                           <tr>
-                            <td colSpan={5} className="text-center py-16">
+                            <td colSpan={6} className="text-center py-16">
                               <div className="flex flex-col items-center gap-2">
                                 <div className="w-12 h-12 rounded-2xl bg-[#F5F7F2] border border-[#224D59]/8 flex items-center justify-center text-[#384022]/25">
                                   <Icons.TPO />
@@ -370,10 +433,10 @@ const handleLogout = () => {
                             >
                               <td className="px-5 py-3.5">
                                 <p className="text-sm font-bold text-[#224D59]">
-                                {tpo.instituteName}
+                                  {tpo.instituteName}
                                 </p>
                                 <p className="text-xs text-[#384022]/40 mt-0.5 font-semibold">
-                                  { tpo.tpoName || "—"}
+                                  {tpo.tpoName || "—"}
                                 </p>
                               </td>
                               <td className="px-5 py-3.5">
@@ -383,7 +446,7 @@ const handleLogout = () => {
                               </td>
                               <td className="px-5 py-3.5">
                                 <span className="text-xs font-bold text-[#384022]/40 bg-[#F5F7F2] px-2 py-1 rounded-lg border border-[#224D59]/8">
-                                  {tpo.contactMethod}
+                                  {tpo.contactMethod || "Email"}
                                 </span>
                               </td>
                               <td className="px-5 py-3.5">
@@ -391,12 +454,11 @@ const handleLogout = () => {
                               </td>
                               <td className="px-5 py-3.5">
                                 <span
-                                  className={`text-xs font-bold ${
-                                    isOverdue(tpo.followUpDate) &&
-                                    tpo.status !== "Converted"
+                                  className={`text-xs font-bold ${isOverdue(tpo.followUpDate) &&
+                                      tpo.status !== "Converted"
                                       ? "text-red-500"
                                       : "text-[#384022]/35"
-                                  }`}
+                                    }`}
                                 >
                                   {fmtDate(tpo.followUpDate)}
                                   {isOverdue(tpo.followUpDate) &&
@@ -405,28 +467,42 @@ const handleLogout = () => {
                                 </span>
                               </td>
                               <td className="px-5 py-3.5">
-  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-    
-    {/* Edit Button */}
-    <button
-      onClick={() => setEditingTPO(tpo)}
-      className="w-7 h-7 rounded-lg border border-[#224D59]/12 bg-white flex items-center justify-center text-[#384022]/40 hover:text-[#224D59] hover:border-[#224D59]/25 transition-all duration-200"
-      title="Edit TPO"
-    >
-      <Icons.Edit />
-    </button>
+                                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  {/* Email Button */}
+                                  <button
+                                    onClick={() => handleSendSingleEmail(tpo)}
+                                    disabled={!emailStatus[tpo._id]?.canSendEmail}
+                                    className={`w-7 h-7 rounded-lg border flex items-center justify-center transition-all duration-200 ${
+                                      emailStatus[tpo._id]?.canSendEmail
+                                        ? "border-[#B8CC34]/30 bg-[#B8CC34]/10 text-[#668824] hover:text-[#224D59] hover:border-[#B8CC34]"
+                                        : "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed"
+                                    }`}
+                                    title={emailStatus[tpo._id]?.lastEmailSent ? `Last email sent: ${new Date(emailStatus[tpo._id].lastEmailSent).toLocaleDateString()}` : "Send email"}
+                                  >
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                                    </svg>
+                                  </button>
 
-    {/* Delete Button */}
-    <button
-      onClick={() => handleDeleteTPO(tpo._id)}
-      className="w-7 h-7 rounded-lg border border-red-200/50 bg-red-50 flex items-center justify-center text-red-500/60 hover:text-red-600 hover:border-red-300 hover:bg-red-100 transition-all duration-200"
-      title="Delete TPO"
-    >
-      <Icons.Delete />
-    </button>
+                                  {/* Edit Button */}
+                                  <button
+                                    onClick={() => setEditingTPO(tpo)}
+                                    className="w-7 h-7 rounded-lg border border-[#224D59]/12 bg-white flex items-center justify-center text-[#384022]/40 hover:text-[#224D59] hover:border-[#224D59]/25 transition-all duration-200"
+                                    title="Edit TPO"
+                                  >
+                                    <Icons.Edit />
+                                  </button>
 
-  </div>
-</td>
+                                  {/* Delete Button */}
+                                  <button
+                                    onClick={() => handleDeleteTPO(tpo._id)}
+                                    className="w-7 h-7 rounded-lg border border-red-200/50 bg-red-50 flex items-center justify-center text-red-500/60 hover:text-red-600 hover:border-red-300 hover:bg-red-100 transition-all duration-200"
+                                    title="Delete TPO"
+                                  >
+                                    <Icons.Delete />
+                                  </button>
+                                </div>
+                              </td>
                             </tr>
                           ))
                         )}
@@ -550,7 +626,7 @@ const handleLogout = () => {
             </>
           )}
 
-          {/*  NOTIFICATIONS*/}
+          {/* NOTIFICATIONS PAGE */}
           {activePage === "notifications" && (
             <>
               <div className="flex items-end justify-between">
@@ -664,7 +740,7 @@ const handleLogout = () => {
             </>
           )}
 
-          {/* PERFORMANCE */}
+          {/* PERFORMANCE PAGE */}
           {activePage === "performance" && (
             <>
               <div>
@@ -755,7 +831,7 @@ const handleLogout = () => {
             </>
           )}
 
-          {/* MY TPOS / FOLLOW-UPS */}
+          {/* MY TPOS / FOLLOW-UPS PAGE */}
           {(activePage === "tpos" || activePage === "followups") && (
             <>
               <div className="flex items-end justify-between">
@@ -769,12 +845,30 @@ const handleLogout = () => {
                       : `${tpos.length} total leads`}
                   </p>
                 </div>
-                <button
-                  onClick={() => setShowAddModal(true)}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#224D59] to-[#1A3A43] text-white text-sm font-bold rounded-xl hover:shadow-[0_8px_20px_rgba(34,77,89,0.3)] transition-all duration-300 hover:-translate-y-0.5"
-                >
-                  <Icons.Add /> Add TPO
-                </button>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      if (tpos.length === 0) {
+                        alert("No TPOs available to email");
+                        return;
+                      }
+                      setSelectedTPOsForEmail(tpos);
+                      setIsBulkEmailModalOpen(true);
+                    }}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#B8CC34] to-[#A5B82E] text-[#224D59] text-sm font-bold rounded-xl hover:shadow-[0_8px_20px_rgba(184,204,52,0.3)] transition-all duration-300 hover:-translate-y-0.5"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                    </svg>
+                    Bulk Email
+                  </button>
+                  <button
+                    onClick={() => setShowAddModal(true)}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#224D59] to-[#1A3A43] text-white text-sm font-bold rounded-xl hover:shadow-[0_8px_20px_rgba(34,77,89,0.3)] transition-all duration-300 hover:-translate-y-0.5"
+                  >
+                    <Icons.Add /> Add TPO
+                  </button>
+                </div>
               </div>
 
               <div className="bg-white rounded-2xl border border-[#224D59]/8 overflow-hidden shadow-sm">
@@ -784,11 +878,10 @@ const handleLogout = () => {
                       <button
                         key={f}
                         onClick={() => setActiveFilter(f)}
-                        className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-all duration-200 ${
-                          activeFilter === f
+                        className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-all duration-200 ${activeFilter === f
                             ? "bg-[#224D59] text-white border-[#224D59] shadow-sm"
                             : "bg-white text-[#384022]/50 border-[#224D59]/10 hover:border-[#224D59]/30"
-                        }`}
+                          }`}
                       >
                         {f === "Follow-up Required" ? "Follow-up" : f}
                       </button>
@@ -800,23 +893,30 @@ const handleLogout = () => {
                   <table className="w-full">
                     <thead>
                       <tr className="bg-[#F5F7F2]/40">
-                        {[
-                          "College / Contact",
-                          "Phone",
-                          "Email",
-                          "Method",
-                          "Status",
-                          "Follow-up",
-                          "Notes",
-                          "",
-                        ].map((h) => (
-                          <th
-                            key={h}
-                            className="text-left text-[9px] font-black text-[#384022]/30 uppercase tracking-[0.1em] px-5 py-3"
-                          >
-                            {h}
-                          </th>
-                        ))}
+                        <th className="text-left text-[9px] font-black text-[#384022]/30 uppercase tracking-[0.1em] px-5 py-3">
+                          College / Contact
+                        </th>
+                        <th className="text-left text-[9px] font-black text-[#384022]/30 uppercase tracking-[0.1em] px-5 py-3">
+                          Phone
+                        </th>
+                        <th className="text-left text-[9px] font-black text-[#384022]/30 uppercase tracking-[0.1em] px-5 py-3">
+                          Email
+                        </th>
+                        <th className="text-left text-[9px] font-black text-[#384022]/30 uppercase tracking-[0.1em] px-5 py-3">
+                          Method
+                        </th>
+                        <th className="text-left text-[9px] font-black text-[#384022]/30 uppercase tracking-[0.1em] px-5 py-3">
+                          Status
+                        </th>
+                        <th className="text-left text-[9px] font-black text-[#384022]/30 uppercase tracking-[0.1em] px-5 py-3">
+                          Follow-up
+                        </th>
+                        <th className="text-left text-[9px] font-black text-[#384022]/30 uppercase tracking-[0.1em] px-5 py-3">
+                          Notes
+                        </th>
+                        <th className="text-left text-[9px] font-black text-[#384022]/30 uppercase tracking-[0.1em] px-5 py-3">
+                          Actions
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -830,7 +930,7 @@ const handleLogout = () => {
                         >
                           <td className="px-5 py-3.5">
                             <p className="text-sm font-bold text-[#224D59]">
-                            {tpo.instituteName}
+                              {tpo.instituteName}
                             </p>
                             <p className="text-xs text-[#384022]/40 mt-0.5 font-semibold">
                               {tpo.tpoName || "—"}
@@ -846,7 +946,7 @@ const handleLogout = () => {
                           </td>
                           <td className="px-5 py-3.5">
                             <span className="text-xs font-bold text-[#384022]/40 bg-[#F5F7F2] px-2 py-1 rounded-lg border border-[#224D59]/8">
-                              {tpo.contactMethod}
+                              {tpo.contactMethod || "Email"}
                             </span>
                           </td>
                           <td className="px-5 py-3.5">
@@ -868,28 +968,42 @@ const handleLogout = () => {
                             </p>
                           </td>
                           <td className="px-5 py-3.5">
-  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-    
-    {/* Edit Button */}
-    <button
-      onClick={() => setEditingTPO(tpo)}
-      className="w-7 h-7 rounded-lg border border-[#224D59]/12 bg-white flex items-center justify-center text-[#384022]/35 hover:text-[#224D59] hover:border-[#224D59]/25 transition-all duration-200"
-      title="Edit TPO"
-    >
-      <Icons.Edit />
-    </button>
+                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              {/* Email Button */}
+                              <button
+                                onClick={() => handleSendSingleEmail(tpo)}
+                                disabled={!emailStatus[tpo._id]?.canSendEmail}
+                                className={`w-7 h-7 rounded-lg border flex items-center justify-center transition-all duration-200 ${
+                                  emailStatus[tpo._id]?.canSendEmail
+                                    ? "border-[#B8CC34]/30 bg-[#B8CC34]/10 text-[#668824] hover:text-[#224D59] hover:border-[#B8CC34]"
+                                    : "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed"
+                                }`}
+                                title={emailStatus[tpo._id]?.lastEmailSent ? `Last email sent: ${new Date(emailStatus[tpo._id].lastEmailSent).toLocaleDateString()}` : "Send email"}
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                                </svg>
+                              </button>
 
-    {/* Delete Button */}
-    <button
-      onClick={() => handleDeleteTPO(tpo._id)}
-      className="w-7 h-7 rounded-lg border border-red-200/50 bg-red-50 flex items-center justify-center text-red-500/60 hover:text-red-600 hover:border-red-300 hover:bg-red-100 transition-all duration-200"
-      title="Delete TPO"
-    >
-      <Icons.Delete />
-    </button>
+                              {/* Edit Button */}
+                              <button
+                                onClick={() => setEditingTPO(tpo)}
+                                className="w-7 h-7 rounded-lg border border-[#224D59]/12 bg-white flex items-center justify-center text-[#384022]/35 hover:text-[#224D59] hover:border-[#224D59]/25 transition-all duration-200"
+                                title="Edit TPO"
+                              >
+                                <Icons.Edit />
+                              </button>
 
-  </div>
-</td>
+                              {/* Delete Button */}
+                              <button
+                                onClick={() => handleDeleteTPO(tpo._id)}
+                                className="w-7 h-7 rounded-lg border border-red-200/50 bg-red-50 flex items-center justify-center text-red-500/60 hover:text-red-600 hover:border-red-300 hover:bg-red-100 transition-all duration-200"
+                                title="Delete TPO"
+                              >
+                                <Icons.Delete />
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -915,9 +1029,22 @@ const handleLogout = () => {
           onAdd={handleTPOAdded}
         />
       )}
+
+      {/* BULK EMAIL MODAL */}
+      <BulkEmailModal
+        isOpen={isBulkEmailModalOpen}
+        onClose={() => {
+          setIsBulkEmailModalOpen(false);
+          setSelectedTPOsForEmail([]);
+        }}
+        selectedTPOs={selectedTPOsForEmail}
+        onComplete={() => {
+          fetchEmailStatus();
+          fetchAll();
+        }}
+      />
     </div>
   );
 };
 
 export default InternDashboard;
-

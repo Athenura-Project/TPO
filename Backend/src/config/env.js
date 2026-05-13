@@ -2,8 +2,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const config = {
-    MONGO_URI: process.env.MONGO_URI ||
-        "mongodb+srv://omkarjadhav415523_db_user:Pass%401234@cluster0.c6ik3pg.mongodb.net/tpo-management?retryWrites=true&w=majority",
+    MONGO_URI: process.env.MONGO_URI,
 
     PORT: process.env.PORT || 5000,
 

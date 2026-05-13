@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence , motion} from 'framer-motion';
-import { useNavigate } from 'react-router-dom'; // 1. Imported useNavigate
+import { useNavigate } from 'react-router-dom';
 import AdminSidebar from '../../components/admin/Sidebar'; 
 import AdminHeader from '../../components/admin/Header';   
+import BulkAssignTPOsModal from '../../components/admin/BulkAssignTPOsModal';
 
 import { 
   getAdminTPOs, 
@@ -14,14 +15,11 @@ import {
   unassignAdminTPO
 } from '../../api/adminApi';
 
-// Remove the mock API service as we will use real APIs
-
-
 // ==========================================
 // 🚀 MAIN COMPONENT
 // ==========================================
 const TPOsPage = () => {
-  const navigate = useNavigate(); // 2. Initialized navigate
+  const navigate = useNavigate();
   
   // Layout States
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -33,19 +31,32 @@ const TPOsPage = () => {
   
   // Modal States (Handles both Add and Edit)
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSaving] = useState(false);
-  const [modalMode, setModalMode] = useState('add'); // 'add' | 'edit'
-  const [formData, setFormData] = useState({ id: null, instituteName: '', tpoName: '', email: '', status: 'New' });
+  const [isSaving, setIsSaving] = useState(false);
+  const [modalMode, setModalMode] = useState('add');
+  const [formData, setFormData] = useState({ 
+    id: null, 
+    instituteName: '', 
+    tpoName: '', 
+    email: '', 
+    phone: '',
+    status: 'Not Contacted' 
+  });
   
   // Details Modal States
   const [selectedTpoForDetail, setSelectedTpoForDetail] = useState(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
-  // Assignment Modal States
+  // Assignment Modal States (Single Assign - TPO to Intern)
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [allInterns, setAllInterns] = useState([]);
   const [assignSearchQuery, setAssignSearchQuery] = useState('');
   const [selectedTpoForAssign, setSelectedTpoForAssign] = useState(null);
+
+  // Bulk Assign Modal States (Multiple TPOs to an Intern)
+  const [isBulkAssignModalOpen, setIsBulkAssignModalOpen] = useState(false);
+  const [selectedInternForBulkAssign, setSelectedInternForBulkAssign] = useState(null);
+  const [internsList, setInternsList] = useState([]);
+  const [isInternDropdownOpen, setIsInternDropdownOpen] = useState(false);
 
   // 1. Initial Data Fetch
   const fetchTPOs = async () => {
@@ -69,22 +80,15 @@ const TPOsPage = () => {
           instituteName: tpo.instituteName || tpo.companyName || "",
           tpoName: tpo.tpoName || tpo.contactPerson || "",
           email: tpo.email || "",
-          status: tpo.status || "New",
-
-         // ✅ ADD THIS
-    studentsRegistered: tpo.studentsRegistered || 0,
-
-    // ✅ ADD THIS
-    lastActive: tpo.lastActive || "Just now",
-    
-    // ✅ ADD THIS
-    assignedInterns: tpo.assignedInterns || [],
-    interactions: tpo.interactions || []
+          phone: tpo.phone || "",
+          status: tpo.status || "Not Contacted",
+          studentsRegistered: tpo.studentsRegistered || 0,
+          lastActive: tpo.lastActive || "Just now",
+          assignedInterns: tpo.assignedInterns || [],
+          interactions: tpo.interactions || []
         }));
     
-  
       console.log("SAFE TPOS:", safeTpos);
-  
       setTpos(safeTpos);
   
     } catch (err) {
@@ -94,21 +98,23 @@ const TPOsPage = () => {
     }
   };
 
-
-  useEffect(() => {
-    fetchTPOs();
-  }, []);
-
   const fetchInterns = async () => {
     try {
       const response = await getAdminInterns();
       if (response?.success) {
-        setAllInterns(response.interns || []);
+        const interns = response.interns || [];
+        setAllInterns(interns);
+        setInternsList(interns);
       }
     } catch (err) {
       console.error("Failed to fetch interns:", err);
     }
   };
+
+  useEffect(() => {
+    fetchTPOs();
+    fetchInterns();
+  }, []);
 
   const handleAssign = async (internId) => {
     if (!selectedTpoForAssign) return;
@@ -117,13 +123,13 @@ const TPOsPage = () => {
         internIds: [internId],
         tpoId: selectedTpoForAssign.id
       });
-      // Refresh both lists
-      fetchTPOs();
-      // Optionally update the selectedTpoForAssign to show latest assigned
+      await fetchTPOs();
+      await fetchInterns();
       const updatedTpo = tpos.find(t => t.id === selectedTpoForAssign.id);
       if (updatedTpo) setSelectedTpoForAssign(updatedTpo);
     } catch (err) {
       console.error("Assignment failed:", err);
+      alert("Failed to assign intern. Please try again.");
     }
   };
 
@@ -134,15 +140,23 @@ const TPOsPage = () => {
         internId,
         tpoId: selectedTpoForAssign.id
       });
-      fetchTPOs();
-      // Update local state to reflect removal
+      await fetchTPOs();
+      await fetchInterns();
       setSelectedTpoForAssign(prev => ({
         ...prev,
         assignedInterns: prev.assignedInterns.filter(i => i._id !== internId)
       }));
     } catch (err) {
       console.error("Unassignment failed:", err);
+      alert("Failed to unassign intern. Please try again.");
     }
+  };
+
+  // Handle Bulk Assign completion
+  const handleBulkAssignComplete = async () => {
+    await fetchTPOs();
+    await fetchInterns();
+    setSelectedInternForBulkAssign(null);
   };
 
   // 2. Open Modal for Add or Edit
@@ -161,7 +175,8 @@ const TPOsPage = () => {
       instituteName: tpo?.instituteName || "",
       tpoName: tpo?.tpoName || "",
       email: tpo?.email || "",
-      status: tpo?.status || "New"
+      phone: tpo?.phone || "",
+      status: tpo?.status || "Not Contacted"
     });
   
     setIsModalOpen(true);
@@ -169,6 +184,7 @@ const TPOsPage = () => {
 
   // 3. Handle Save (Create or Update)
   const handleSave = async () => {
+    setIsSaving(true);
     console.log("FORM DATA:", formData);
     try {
       if (modalMode === "edit") {
@@ -176,17 +192,17 @@ const TPOsPage = () => {
           console.error("Missing ID:", formData);
           return;
         }
-  
         await updateAdminTPO(formData.id, formData);
       } else {
         await createAdminTPO(formData);
       }
-  
-      fetchTPOs();
+      await fetchTPOs();
       setIsModalOpen(false);
-  
     } catch (error) {
       console.error("Save failed:", error);
+      alert("Failed to save. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -197,9 +213,15 @@ const TPOsPage = () => {
       return;
     }
   
-    if (window.confirm("Are you sure?")) {
-      await deleteAdminTPO(id);
-      fetchTPOs();
+    if (window.confirm("Are you sure you want to delete this TPO?")) {
+      try {
+        await deleteAdminTPO(id);
+        await fetchTPOs();
+        alert("TPO deleted successfully");
+      } catch (error) {
+        console.error("Delete failed:", error);
+        alert("Failed to delete TPO. Please try again.");
+      }
     }
   };
 
@@ -209,23 +231,26 @@ const TPOsPage = () => {
 
   // Helper for Status UI
   const getStatusColor = (status) => {
-    if(status.includes('Active')) return 'bg-green-100 text-green-700 border-green-200';
-    if(status.includes('Pending')) return 'bg-orange-100 text-orange-700 border-orange-200';
-    if(status.includes('Inactive')) return 'bg-red-100 text-red-700 border-red-200';
+    if(status === 'Converted') return 'bg-green-100 text-green-700 border-green-200';
+    if(status === 'Contacted') return 'bg-blue-100 text-blue-700 border-blue-200';
+    if(status === 'Follow-up Required') return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+    if(status === 'No Response') return 'bg-red-100 text-red-700 border-red-200';
+    if(status === 'Rejected') return 'bg-gray-100 text-gray-700 border-gray-200';
+    if(status === 'Assigned') return 'bg-purple-100 text-purple-700 border-purple-200';
     return 'bg-gray-100 text-gray-700 border-gray-200';
   };
 
-  // 3. Improved Search Filter (Checks Name, TPO, Email, and Status)
+  // Search Filter
   const filteredTPOs = tpos.filter(tpo => {
     if (!searchQuery) return true;
-    const searchString = `${tpo.instituteName} ${tpo.tpoName} ${tpo.email} ${tpo.status} ${tpo.assignedInterns?.map(i => i.studentId).join(' ')}`.toLowerCase();
+    const searchString = `${tpo.instituteName} ${tpo.tpoName} ${tpo.email} ${tpo.phone} ${tpo.status} ${tpo.assignedInterns?.map(i => i.studentId).join(' ')}`.toLowerCase();
     return searchString.includes(searchQuery.toLowerCase());
   });
 
   return (
     <div className="flex h-screen bg-[#F5F7F2] font-sans overflow-hidden selection:bg-[#B8CC34] selection:text-[#224D59]">
       
-      {/* 🚀 SIDEBAR */}
+      {/* SIDEBAR */}
       <div className="flex-none h-full z-40 transition-all duration-300 hidden lg:block">
         <AdminSidebar />
       </div>
@@ -241,11 +266,10 @@ const TPOsPage = () => {
         )}
       </AnimatePresence>
 
-      {/* 🚀 MAIN CONTENT */}
+      {/* MAIN CONTENT */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#B8CC34]/10 rounded-full blur-[120px] pointer-events-none z-0"></div>
         
-        {/* 4. Connected Global Header Search */}
         <AdminHeader 
           toggleSidebar={() => setIsMobileSidebarOpen(true)} 
           activeTab="Institute TPOs" 
@@ -274,7 +298,7 @@ const TPOsPage = () => {
                   />
                 </div>
                 
-                {/* 5. Added Bulk Import Button */}
+                {/* Bulk Import Button */}
                 <button 
                   onClick={() => navigate('/admin/bulk/import')}
                   className="px-5 py-2.5 rounded-xl bg-white border border-[#224D59]/10 text-[#224D59] font-bold text-sm hover:bg-[#F5F7F2] shadow-sm hover:shadow transition-all flex items-center justify-center"
@@ -285,6 +309,79 @@ const TPOsPage = () => {
                   Bulk Import
                 </button>
 
+                {/* Bulk Assign TPOs to Intern Button */}
+                <div className="relative">
+                  <button 
+                    onClick={() => setIsInternDropdownOpen(!isInternDropdownOpen)}
+                    className="px-5 py-2.5 rounded-xl bg-[#224D59]/10 border border-[#224D59]/20 text-[#224D59] font-bold text-sm hover:bg-[#224D59]/20 shadow-sm hover:shadow transition-all flex items-center justify-center"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    Bulk Assign TPOs
+                    <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                  </button>
+
+                  {/* Intern Dropdown for Bulk Assign */}
+                  {isInternDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-[#224D59]/10 overflow-hidden z-20">
+                      <div className="p-3 bg-[#F5F7F2] border-b border-[#224D59]/10">
+                        <input
+                          type="text"
+                          placeholder="Search intern..."
+                          className="w-full px-3 py-2 text-sm border border-[#224D59]/10 rounded-lg focus:outline-none focus:border-[#B8CC34]"
+                          onChange={(e) => {
+                            const search = e.target.value.toLowerCase();
+                            const filtered = internsList.filter(intern => 
+                              intern.name?.toLowerCase().includes(search) || 
+                              intern.studentId?.toLowerCase().includes(search)
+                            );
+                            setAllInterns(filtered);
+                          }}
+                        />
+                      </div>
+                      <div className="max-h-64 overflow-y-auto">
+                        {allInterns.length === 0 ? (
+                          <div className="p-4 text-center text-[#384022]/60 text-sm">
+                            No interns found
+                          </div>
+                        ) : (
+                          allInterns.map((intern) => (
+                            <button
+                              key={intern._id}
+                              onClick={() => {
+                                setSelectedInternForBulkAssign(intern);
+                                setIsBulkAssignModalOpen(true);
+                                setIsInternDropdownOpen(false);
+                                setAllInterns(internsList);
+                              }}
+                              className="w-full text-left px-4 py-3 hover:bg-[#F5F7F2] transition-colors border-b border-[#224D59]/5 last:border-0"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-[#B8CC34]/20 text-[#224D59] font-bold flex items-center justify-center text-sm">
+                                  {(intern.name?.[0] || '?').toUpperCase()}
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-sm font-semibold text-[#224D59]">{intern.name}</p>
+                                  <p className="text-xs text-[#384022]/60">{intern.studentId} • {intern.email}</p>
+                                </div>
+                                <span className={`text-xs px-2 py-1 rounded-full ${
+                                  intern.status === 'Assigned' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                                }`}>
+                                  {intern.status || 'Active'}
+                                </span>
+                              </div>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Add Institute Button */}
                 <button 
                   onClick={() => openModal('add')}
                   className="px-5 py-2.5 rounded-xl bg-[#224D59] text-white font-bold text-sm hover:bg-[#1A3A43] shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 flex items-center justify-center"
@@ -309,6 +406,7 @@ const TPOsPage = () => {
                       <tr className="bg-[#224D59]/5 border-b border-[#224D59]/10">
                         <th className="py-4 px-6 text-xs font-extrabold text-[#224D59] uppercase tracking-wider">Institute Name</th>
                         <th className="py-4 px-6 text-xs font-extrabold text-[#224D59] uppercase tracking-wider">TPO Contact</th>
+                        <th className="py-4 px-6 text-xs font-extrabold text-[#224D59] uppercase tracking-wider">Phone</th>
                         <th className="py-4 px-6 text-xs font-extrabold text-[#224D59] uppercase tracking-wider">Status</th>
                         <th className="py-4 px-6 text-xs font-extrabold text-[#224D59] uppercase tracking-wider text-center">Students Reg.</th>
                         <th className="py-4 px-6 text-xs font-extrabold text-[#224D59] uppercase tracking-wider">Assign Intern</th>
@@ -316,67 +414,69 @@ const TPOsPage = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#224D59]/5">
-                    {filteredTPOs
-  .filter(tpo => tpo?.id)
-  .map((tpo) => (
-                        <tr key={tpo.id} className="hover:bg-[#F5F7F2]/50 transition-colors group">
-                          <td className="py-4 px-6">
-                            <div className="flex items-center">
-                              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#224D59] to-[#1A3A43] text-[#B8CC34] font-black flex items-center justify-center mr-3 shadow-sm">
-                              {(tpo.instituteName?.[0] || '?').toUpperCase()}
+                      {filteredTPOs
+                        .filter(tpo => tpo?.id)
+                        .map((tpo) => (
+                          <tr key={tpo.id} className="hover:bg-[#F5F7F2]/50 transition-colors group">
+                            <td className="py-4 px-6">
+                              <div className="flex items-center">
+                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#224D59] to-[#1A3A43] text-[#B8CC34] font-black flex items-center justify-center mr-3 shadow-sm">
+                                  {(tpo.instituteName?.[0] || '?').toUpperCase()}
+                                </div>
+                                <div>
+                                  <p className="text-sm font-bold text-[#224D59]">{tpo.instituteName}</p>
+                                  <p className="text-xs font-medium text-[#384022]/50">{tpo.email}</p>
+                                </div>
                               </div>
-                              <div>
-                                <p className="text-sm font-bold text-[#224D59]">{tpo.instituteName}</p>
-                                <p className="text-xs font-medium text-[#384022]/50">Last Active: {tpo.lastActive}</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="py-4 px-6">
-                            <p className="text-sm font-bold text-[#224D59]">{tpo.tpoName}</p>
-                            <p className="text-xs font-medium text-[#384022]/70">{tpo.email}</p>
-                          </td>
-                          <td className="py-4 px-6">
-                            <span className={`px-3 py-1.5 rounded-full text-xs font-bold border ${getStatusColor(tpo.status)}`}>
-                              {tpo.status}
-                            </span>
-                          </td>
-                          <td className="py-4 px-6 text-center">
-                            <span className="text-lg font-black text-[#224D59]">{tpo.studentsRegistered}</span>
-                          </td>
-                          <td className="py-4 px-6">
-                            <button 
-                              onClick={() => {
-                                setSelectedTpoForAssign(tpo);
-                                setIsAssignModalOpen(true);
-                                fetchInterns();
-                              }}
-                              className="px-4 py-2 bg-[#B8CC34] text-[#224D59] text-xs font-black rounded-xl hover:shadow-lg transition-all flex items-center gap-2"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4"></path></svg>
-                              Manage
-                            </button>
-                          </td>
-                          <td className="py-4 px-6 text-right">
-                            <div className="flex justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            </td>
+                            <td className="py-4 px-6">
+                              <p className="text-sm font-bold text-[#224D59]">{tpo.tpoName || 'N/A'}</p>
+                            </td>
+                            <td className="py-4 px-6">
+                              <p className="text-sm text-[#224D59]">{tpo.phone || 'N/A'}</p>
+                            </td>
+                            <td className="py-4 px-6">
+                              <span className={`px-3 py-1.5 rounded-full text-xs font-bold border ${getStatusColor(tpo.status)}`}>
+                                {tpo.status}
+                              </span>
+                            </td>
+                            <td className="py-4 px-6 text-center">
+                              <span className="text-lg font-black text-[#224D59]">{tpo.studentsRegistered}</span>
+                            </td>
+                            <td className="py-4 px-6">
                               <button 
                                 onClick={() => {
-                                  setSelectedTpoForDetail(tpo);
-                                  setIsDetailsModalOpen(true);
+                                  setSelectedTpoForAssign(tpo);
+                                  setIsAssignModalOpen(true);
+                                  fetchInterns();
                                 }}
-                                className="px-3 py-1 bg-[#224D59] text-white text-[10px] font-bold rounded-lg hover:bg-[#1A3A43] transition-all"
+                                className="px-4 py-2 bg-[#B8CC34] text-[#224D59] text-xs font-black rounded-xl hover:shadow-lg transition-all flex items-center gap-2"
                               >
-                                View Details
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4"></path></svg>
+                                Manage
                               </button>
-                              <button  onClick={() => openModal('edit', tpo)} className="p-1.5 text-[#224D59]/60 hover:text-[#224D59] hover:bg-[#F5F7F2] rounded-lg transition-colors">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                              </button>
-                              <button   onClick={() => tpo?.id && handleDelete(tpo.id)}className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+                            <td className="py-4 px-6 text-right">
+                              <div className="flex justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button 
+                                  onClick={() => {
+                                    setSelectedTpoForDetail(tpo);
+                                    setIsDetailsModalOpen(true);
+                                  }}
+                                  className="px-3 py-1 bg-[#224D59] text-white text-[10px] font-bold rounded-lg hover:bg-[#1A3A43] transition-all"
+                                >
+                                  View Details
+                                </button>
+                                <button onClick={() => openModal('edit', tpo)} className="p-1.5 text-[#224D59]/60 hover:text-[#224D59] hover:bg-[#F5F7F2] rounded-lg transition-colors">
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                </button>
+                                <button onClick={() => tpo?.id && handleDelete(tpo.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
                     </tbody>
                   </table>
                 </motion.div>
@@ -388,32 +488,37 @@ const TPOsPage = () => {
                       <div className="flex justify-between items-start mb-4">
                         <div className="flex items-center">
                           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#224D59] to-[#1A3A43] text-[#B8CC34] font-black flex items-center justify-center mr-3 shadow-sm text-lg">
-                          {(tpo.instituteName?.[0] || '?').toUpperCase()}
+                            {(tpo.instituteName?.[0] || '?').toUpperCase()}
                           </div>
                           <div>
                             <p className="text-base font-bold text-[#224D59] leading-tight">{tpo.instituteName}</p>
-                            <span className={`inline-block mt-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${getStatusColor(tpo.status)}`}>
-                              {tpo.status}
-                            </span>
+                            <p className="text-xs text-[#384022]/60">{tpo.email}</p>
                           </div>
                         </div>
+                        <span className={`px-2 py-1 rounded-md text-[10px] font-bold border ${getStatusColor(tpo.status)}`}>
+                          {tpo.status}
+                        </span>
                       </div>
                       
                       <div className="bg-[#F5F7F2] p-3 rounded-xl border border-[#224D59]/5 mb-4">
                         <div className="flex justify-between items-center mb-2">
                           <div>
                             <p className="text-[10px] uppercase font-bold text-[#384022]/50">TPO Contact</p>
-                            <p className="text-xs font-semibold text-[#224D59]">{tpo.tpoName}</p>
+                            <p className="text-xs font-semibold text-[#224D59]">{tpo.tpoName || 'N/A'}</p>
                           </div>
                           <div className="text-right">
                             <p className="text-[10px] uppercase font-bold text-[#384022]/50">Students</p>
                             <p className="text-sm font-black text-[#224D59]">{tpo.studentsRegistered}</p>
                           </div>
                         </div>
-                        <p className="text-[11px] font-medium text-[#224D59]/70 flex items-center mt-1 pt-2 border-t border-[#224D59]/5">
-                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-                          {tpo.email}
-                        </p>
+                        {tpo.phone && (
+                          <p className="text-[11px] font-medium text-[#224D59]/70 flex items-center mt-1 pt-2 border-t border-[#224D59]/5">
+                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                            </svg>
+                            {tpo.phone}
+                          </p>
+                        )}
                       </div>
 
                       <div className="flex justify-between items-center pt-2">
@@ -427,10 +532,7 @@ const TPOsPage = () => {
                           View Details
                         </button>
                         <div className="flex space-x-2">
-                          <button onClick={() => {
-  console.log("TPO PASSED TO MODAL:", tpo);
-  openModal('edit', tpo);
-}}className="p-2 text-[#224D59] bg-[#F5F7F2] hover:bg-[#E8EFE9] rounded-lg transition-colors">
+                          <button onClick={() => openModal('edit', tpo)} className="p-2 text-[#224D59] bg-[#F5F7F2] hover:bg-[#E8EFE9] rounded-lg transition-colors">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                           </button>
                           <button onClick={() => handleDelete(tpo.id)} className="p-2 text-red-500 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
@@ -447,7 +549,7 @@ const TPOsPage = () => {
         </div>
       </main>
 
-      {/* 🚀 ADD/EDIT MODAL (Handles API Saving) */}
+      {/* ADD/EDIT MODAL - UPDATED WITH PHONE FIELD AND CORRECT STATUSES */}
       <AnimatePresence>
         {isModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -475,29 +577,35 @@ const TPOsPage = () => {
               </div>
               
               <div className="p-6 space-y-5">
+                {/* Institute Name */}
                 <div>
-                  <label className="block text-xs font-bold text-[#224D59] uppercase tracking-wider mb-1.5">College / Institute Name</label>
+                  <label className="block text-xs font-bold text-[#224D59] uppercase tracking-wider mb-1.5">
+                    College / Institute Name <span className="text-red-500">*</span>
+                  </label>
                   <input 
                     type="text" 
                     value={formData.instituteName}
                     onChange={(e) => setFormData({...formData, instituteName: e.target.value})}
                     className="w-full bg-[#F5F7F2] border border-[#224D59]/10 rounded-xl px-4 py-3 text-sm text-[#224D59] outline-none focus:border-[#B8CC34] focus:ring-2 focus:ring-[#B8CC34]/20 transition-all" 
                     placeholder="e.g. Delhi Technological University" 
+                    required
                   />
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {/* TPO Name */}
                   <div>
                     <label className="block text-xs font-bold text-[#224D59] uppercase tracking-wider mb-1.5">TPO Name</label>
                     <input 
                       type="text" 
                       value={formData.tpoName}
-                      // value={formData.status}
                       onChange={(e) => setFormData({...formData, tpoName: e.target.value})}
                       className="w-full bg-[#F5F7F2] border border-[#224D59]/10 rounded-xl px-4 py-3 text-sm text-[#224D59] outline-none focus:border-[#B8CC34] focus:ring-2 focus:ring-[#B8CC34]/20 transition-all" 
                       placeholder="e.g. Dr. Arvind Sharma" 
                     />
                   </div>
+                  
+                  {/* Email */}
                   <div>
                     <label className="block text-xs font-bold text-[#224D59] uppercase tracking-wider mb-1.5">Official Email</label>
                     <input 
@@ -510,6 +618,21 @@ const TPOsPage = () => {
                   </div>
                 </div>
 
+                {/* Phone Number */}
+                <div>
+                  <label className="block text-xs font-bold text-[#224D59] uppercase tracking-wider mb-1.5">Phone Number</label>
+                  <input 
+                    type="tel" 
+                    value={formData.phone}
+                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                    className="w-full bg-[#F5F7F2] border border-[#224D59]/10 rounded-xl px-4 py-3 text-sm text-[#224D59] outline-none focus:border-[#B8CC34] focus:ring-2 focus:ring-[#B8CC34]/20 transition-all" 
+                    placeholder="e.g. 9876543210" 
+                    maxLength="10"
+                  />
+                  <p className="text-[10px] text-[#384022]/50 mt-1">10-digit mobile number</p>
+                </div>
+
+                {/* Status - Updated with schema enum values */}
                 <div>
                   <label className="block text-xs font-bold text-[#224D59] uppercase tracking-wider mb-1.5">Account Status</label>
                   <select 
@@ -517,10 +640,14 @@ const TPOsPage = () => {
                     onChange={(e) => setFormData({...formData, status: e.target.value})}
                     className="w-full bg-[#F5F7F2] border border-[#224D59]/10 rounded-xl px-4 py-3 text-sm text-[#224D59] outline-none focus:border-[#B8CC34] focus:ring-2 focus:ring-[#B8CC34]/20 transition-all appearance-none cursor-pointer"
                   >
-                   <option value="New">🆕 New</option>
-                   <option value="Contacted">📞 Contacted</option>
-                  <option value="Follow-up Required">🔁 Follow-up Required</option>
-                  <option value="Converted">✅ Converted</option>
+                    <option value="New">🆕 New</option>
+                    <option value="Not Contacted">📞 Not Contacted</option>
+                    <option value="Contacted">✅ Contacted</option>
+                    <option value="Follow-up Required">🔄 Follow-up Required</option>
+                    <option value="No Response">📵 No Response</option>
+                    <option value="Converted">🎯 Converted</option>
+                    <option value="Rejected">❌ Rejected</option>
+                    <option value="Assigned">👥 Assigned</option>
                   </select>
                 </div>
 
@@ -530,7 +657,7 @@ const TPOsPage = () => {
                   </button>
                   <button 
                     onClick={handleSave}
-                    disabled={isSaving}
+                    disabled={isSaving || !formData.instituteName}
                     className="flex-1 py-3 rounded-xl bg-[#224D59] text-white font-bold text-sm hover:bg-[#1A3A43] shadow-[0_5px_15px_rgba(34,77,89,0.3)] transition-all flex justify-center items-center disabled:opacity-70 disabled:cursor-not-allowed"
                   >
                     {isSaving ? (
@@ -546,7 +673,7 @@ const TPOsPage = () => {
         )}
       </AnimatePresence>
  
-      {/* 🚀 DETAILS MODAL */}
+      {/* DETAILS MODAL - Keep as is */}
       <AnimatePresence>
         {isDetailsModalOpen && selectedTpoForDetail && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -563,27 +690,25 @@ const TPOsPage = () => {
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
               className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
             >
-              {/* Header */}
               <div className="p-6 bg-gradient-to-r from-[#224D59] to-[#1A3A43] text-white flex justify-between items-center">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-2xl bg-[#B8CC34] text-[#224D59] font-black flex items-center justify-center text-xl shadow-lg">
-                    {selectedTpoForDetail.instituteName[0]}
+                    {selectedTpoForDetail.instituteName?.[0] || '?'}
                   </div>
                   <div>
                     <h3 className="text-xl font-extrabold">{selectedTpoForDetail.instituteName}</h3>
-                    <p className="text-[#B8CC34] text-xs font-bold">{selectedTpoForDetail.tpoName} • {selectedTpoForDetail.email}</p>
+                    <p className="text-[#B8CC34] text-xs font-bold">{selectedTpoForDetail.tpoName || 'No TPO Name'} • {selectedTpoForDetail.email || 'No Email'}</p>
+                    {selectedTpoForDetail.phone && (
+                      <p className="text-white/60 text-xs mt-1">📞 {selectedTpoForDetail.phone}</p>
+                    )}
                   </div>
                 </div>
-                <button 
-                  onClick={() => setIsDetailsModalOpen(false)}
-                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
-                >
+                <button onClick={() => setIsDetailsModalOpen(false)} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
-                {/* Assigned Interns Section */}
                 <section>
                   <div className="flex items-center gap-2 mb-4">
                     <div className="w-1 h-4 bg-[#B8CC34] rounded-full"></div>
@@ -601,12 +726,11 @@ const TPOsPage = () => {
                         </div>
                       ))
                     ) : (
-                      <p className="text-sm text-[#384022]/40 font-medium italic italic ml-2">No interns assigned yet.</p>
+                      <p className="text-sm text-[#384022]/40 font-medium italic ml-2">No interns assigned yet.</p>
                     )}
                   </div>
                 </section>
 
-                {/* Interaction History Section */}
                 <section>
                   <div className="flex items-center gap-2 mb-4">
                     <div className="w-1 h-4 bg-[#224D59] rounded-full"></div>
@@ -640,12 +764,8 @@ const TPOsPage = () => {
                 </section>
               </div>
 
-              {/* Footer */}
               <div className="p-4 bg-[#F5F7F2] border-t border-[#224D59]/8 flex justify-end">
-                <button 
-                  onClick={() => setIsDetailsModalOpen(false)}
-                  className="px-6 py-2 rounded-xl bg-[#224D59] text-white font-bold text-sm hover:shadow-lg transition-all"
-                >
+                <button onClick={() => setIsDetailsModalOpen(false)} className="px-6 py-2 rounded-xl bg-[#224D59] text-white font-bold text-sm hover:shadow-lg transition-all">
                   Close View
                 </button>
               </div>
@@ -654,7 +774,7 @@ const TPOsPage = () => {
         )}
       </AnimatePresence>
  
-      {/* 🚀 ASSIGN INTERN MODAL */}
+      {/* ASSIGN INTERN MODAL (Single Assign) - Keep as is */}
       <AnimatePresence>
         {isAssignModalOpen && selectedTpoForAssign && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -671,97 +791,80 @@ const TPOsPage = () => {
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
               className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
             >
-              {/* Header */}
               <div className="p-6 bg-[#224D59] text-white flex justify-between items-center">
                 <div>
                   <h3 className="text-lg font-extrabold">Manage Assignments</h3>
                   <p className="text-white/60 text-xs font-bold mt-0.5">{selectedTpoForAssign.instituteName}</p>
                 </div>
-                <button 
-                  onClick={() => setIsAssignModalOpen(false)}
-                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
-                >
+                <button onClick={() => setIsAssignModalOpen(false)} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
               </div>
  
               <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-                {/* Currently Assigned */}
                 <div className="p-4 bg-[#F5F7F2]/50 border-b border-[#224D59]/10">
-                   <h4 className="text-[10px] font-black text-[#224D59]/40 uppercase tracking-widest mb-3">Currently Assigned</h4>
-                   <div className="flex flex-wrap gap-2">
-                      {selectedTpoForAssign.assignedInterns?.length > 0 ? (
-                        selectedTpoForAssign.assignedInterns.map((intern, idx) => (
-                          <div key={idx} className="flex items-center gap-2 pl-3 pr-1.5 py-1.5 bg-[#224D59] text-white rounded-xl text-xs font-bold shadow-sm">
-                             <span>{intern.name} ({intern.studentId})</span>
-                             <button 
-                                onClick={() => handleUnassign(intern._id)}
-                                className="w-5 h-5 rounded-lg bg-red-500/20 text-red-200 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all"
-                             >
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
-                             </button>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-xs text-[#384022]/40 font-medium italic">No interns assigned yet.</p>
-                      )}
-                   </div>
+                  <h4 className="text-[10px] font-black text-[#224D59]/40 uppercase tracking-widest mb-3">Currently Assigned</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedTpoForAssign.assignedInterns?.length > 0 ? (
+                      selectedTpoForAssign.assignedInterns.map((intern, idx) => (
+                        <div key={idx} className="flex items-center gap-2 pl-3 pr-1.5 py-1.5 bg-[#224D59] text-white rounded-xl text-xs font-bold shadow-sm">
+                          <span>{intern.name} ({intern.studentId})</span>
+                          <button onClick={() => handleUnassign(intern._id)} className="w-5 h-5 rounded-lg bg-red-500/20 text-red-200 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                          </button>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-[#384022]/40 font-medium italic">No interns assigned yet.</p>
+                    )}
+                  </div>
                 </div>
  
-                {/* Search & List */}
                 <div className="p-4 flex flex-col flex-1 min-h-0">
-                   <div className="relative mb-4">
-                      <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#224D59]/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                      <input 
-                        type="text" 
-                        placeholder="Search for an intern to assign..." 
-                        className="w-full bg-[#F5F7F2] border border-[#224D59]/10 rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none focus:border-[#B8CC34] focus:ring-2 focus:ring-[#B8CC34]/20 transition-all font-semibold"
-                        value={assignSearchQuery}
-                        onChange={(e) => setAssignSearchQuery(e.target.value)}
-                      />
-                   </div>
+                  <div className="relative mb-4">
+                    <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#224D59]/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <input 
+                      type="text" 
+                      placeholder="Search for an intern to assign..." 
+                      className="w-full bg-[#F5F7F2] border border-[#224D59]/10 rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none focus:border-[#B8CC34] focus:ring-2 focus:ring-[#B8CC34]/20 transition-all font-semibold"
+                      value={assignSearchQuery}
+                      onChange={(e) => setAssignSearchQuery(e.target.value)}
+                    />
+                  </div>
  
-                   <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-                      {allInterns
-                        .filter(i => {
-                          const query = assignSearchQuery.toLowerCase();
-                          return i.name?.toLowerCase().includes(query) || i.studentId?.toLowerCase().includes(query);
-                        })
-                        .map((intern) => {
-                          const isAlreadyAssigned = selectedTpoForAssign.assignedInterns?.some(ai => ai._id === intern._id);
-                          return (
-                            <div key={intern._id} className={`p-3 rounded-2xl border transition-all flex items-center justify-between ${isAlreadyAssigned ? 'bg-[#F5F7F2] border-[#224D59]/5 opacity-60' : 'bg-white border-[#224D59]/10 hover:border-[#B8CC34] hover:shadow-sm'}`}>
-                               <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 rounded-full bg-[#B8CC34]/20 text-[#224D59] font-black flex items-center justify-center text-xs">
-                                     {(intern.name || "?")[0]}
-                                  </div>
-                                  <div>
-                                     <p className="text-sm font-bold text-[#224D59]">{intern.name}</p>
-                                     <p className="text-[10px] font-black text-[#384022]/40 tracking-wider uppercase">{intern.studentId} • {intern.branch}</p>
-                                  </div>
-                               </div>
-                               {!isAlreadyAssigned && (
-                                 <button 
-                                   onClick={() => handleAssign(intern._id)}
-                                   className="px-4 py-1.5 bg-[#B8CC34] text-[#224D59] text-[10px] font-black uppercase rounded-lg hover:shadow-md transition-all active:scale-95"
-                                 >
-                                   Assign
-                                 </button>
-                               )}
+                  <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                    {allInterns
+                      .filter(i => {
+                        const query = assignSearchQuery.toLowerCase();
+                        return i.name?.toLowerCase().includes(query) || i.studentId?.toLowerCase().includes(query);
+                      })
+                      .map((intern) => {
+                        const isAlreadyAssigned = selectedTpoForAssign.assignedInterns?.some(ai => ai._id === intern._id);
+                        return (
+                          <div key={intern._id} className={`p-3 rounded-2xl border transition-all flex items-center justify-between ${isAlreadyAssigned ? 'bg-[#F5F7F2] border-[#224D59]/5 opacity-60' : 'bg-white border-[#224D59]/10 hover:border-[#B8CC34] hover:shadow-sm'}`}>
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-[#B8CC34]/20 text-[#224D59] font-black flex items-center justify-center text-xs">
+                                {(intern.name || "?")[0]}
+                              </div>
+                              <div>
+                                <p className="text-sm font-bold text-[#224D59]">{intern.name}</p>
+                                <p className="text-[10px] font-black text-[#384022]/40 tracking-wider uppercase">{intern.studentId} • {intern.branch}</p>
+                              </div>
                             </div>
-                          );
-                        })
-                      }
-                   </div>
+                            {!isAlreadyAssigned && (
+                              <button onClick={() => handleAssign(intern._id)} className="px-4 py-1.5 bg-[#B8CC34] text-[#224D59] text-[10px] font-black uppercase rounded-lg hover:shadow-md transition-all active:scale-95">
+                                Assign
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                  </div>
                 </div>
               </div>
  
-              {/* Footer */}
               <div className="p-4 bg-[#F5F7F2] border-t border-[#224D59]/10 flex justify-end">
-                <button 
-                  onClick={() => setIsAssignModalOpen(false)}
-                  className="px-6 py-2 rounded-xl bg-[#224D59] text-white font-bold text-sm hover:shadow-lg transition-all"
-                >
+                <button onClick={() => setIsAssignModalOpen(false)} className="px-6 py-2 rounded-xl bg-[#224D59] text-white font-bold text-sm hover:shadow-lg transition-all">
                   Done
                 </button>
               </div>
@@ -769,6 +872,17 @@ const TPOsPage = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* BULK ASSIGN TPOS TO INTERN MODAL */}
+      <BulkAssignTPOsModal
+        isOpen={isBulkAssignModalOpen}
+        onClose={() => {
+          setIsBulkAssignModalOpen(false);
+          setSelectedInternForBulkAssign(null);
+        }}
+        intern={selectedInternForBulkAssign}
+        onAssignComplete={handleBulkAssignComplete}
+      />
 
     </div>
   );

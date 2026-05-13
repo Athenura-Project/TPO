@@ -10,9 +10,9 @@ const AdminProfilePage = () => {
   
   // Form States - User Details
   const [formData, setFormData] = useState({
-    name: 'Avnish',
-    email: 'avnishkumar6871@gmail.com',
-    phone: '+91 9835051934',
+    name: 'Sameer Singh',
+    email: 'mrsameersingh001@gmail.com',
+    phone: '+91 639694936',
     role: 'Super Admin',
   });
 

@@ -5,7 +5,12 @@ import Performance from "../models/performance.model.js";
 import Assignment from "../models/assignment.model.js";
 
 import TPO from "../models/tpo.model.js";
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 
 const normalizeStatus = (status) => {
@@ -443,3 +448,300 @@ async function updatePerformanceMetrics(internId) {
         console.error("Error updating performance metrics:", error);
     }
 }
+
+
+
+// ✅ Send email to single TPO
+export const sendTPOEmail = async (req, res) => {
+    try {
+        const { tpoId, subject, message } = req.body;
+
+        // Find TPO
+        const tpo = await TPO.findOne({
+            _id: tpoId,
+            assignedInterns: { $in: [req.user._id] }
+        });
+
+        if (!tpo) {
+            return res.status(404).json({
+                success: false,
+                message: "TPO not found or you don't have access"
+            });
+        }
+
+        if (!tpo.email) {
+            return res.status(400).json({
+                success: false,
+                message: "TPO does not have an email address"
+            });
+        }
+
+        // Get PDF attachments
+        const attachments = [];
+        const pdfFiles = ['brochure.pdf', 'placement-policy.pdf']; // Your PDF file names
+        
+        for (const pdfFile of pdfFiles) {
+            const pdfPath = path.join(__dirname, '../uploads', pdfFile);
+            if (fs.existsSync(pdfPath)) {
+                const pdfContent = fs.readFileSync(pdfPath);
+                attachments.push({
+                    name: pdfFile,
+                    content: pdfContent.toString('base64'),
+                    type: 'application/pdf'
+                });
+            }
+        }
+
+        // Send email via Brevo
+        const emailResponse = await axios.post(
+            "https://api.brevo.com/v3/smtp/email",
+            {
+                sender: {
+                    name: req.user.name || "Intern",
+                    email: process.env.SENDER_EMAIL
+                },
+                to: [{ email: tpo.email, name: tpo.tpoName || tpo.instituteName }],
+                subject: subject || `TPO Collaboration Opportunity - ${tpo.instituteName}`,
+                htmlContent: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                        <h2 style="color: #224D59;">Dear ${tpo.tpoName || 'TPO'},</h2>
+                        <p>${message || `We are excited to connect with ${tpo.instituteName} for potential collaboration opportunities.`}</p>
+                        <br/>
+                        <p>Best regards,<br/>${req.user.name}<br/>Intern at Athenura</p>
+                        <hr style="border: 1px solid #B8CC34;"/>
+                        <p style="font-size: 12px; color: #666;">This is an automated message from Athenura TPO Management System.</p>
+                    </div>
+                `,
+                attachment: attachments
+            },
+            {
+                headers: {
+                    "api-key": process.env.BREVO_API_KEY,
+                    "Content-Type": "application/json",
+                },
+            }
+        );
+
+        // Record email interaction
+        tpo.interactions.push({
+            internId: req.user._id,
+            studentId: req.user.studentId,
+            internName: req.user.name,
+            note: `Email sent: ${subject}`,
+            contactMethod: "Email",
+            date: new Date()
+        });
+        
+        tpo.lastEmailSent = new Date();
+        await tpo.save();
+
+        // Create notification for intern
+        await Notification.create({
+            recipientId: req.user._id,
+            title: "Email Sent",
+            message: `Email sent successfully to ${tpo.instituteName}`,
+            type: "announcement",
+            read: false
+        });
+
+        res.json({
+            success: true,
+            message: `Email sent successfully to ${tpo.instituteName}`,
+            data: emailResponse.data
+        });
+
+    } catch (error) {
+        console.error("Error sending email:", error);
+        res.status(500).json({
+            success: false,
+            message: error.response?.data?.message || "Failed to send email"
+        });
+    }
+};
+
+// ✅ Bulk send emails to multiple TPOs
+export const bulkSendTPOEmails = async (req, res) => {
+    try {
+        const { tpoIds, subject, message } = req.body;
+
+        if (!tpoIds || !Array.isArray(tpoIds) || tpoIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Please select at least one TPO"
+            });
+        }
+
+        // Find all selected TPOs assigned to this intern
+        const tpos = await TPO.find({
+            _id: { $in: tpoIds },
+            assignedInterns: { $in: [req.user._id] }
+        });
+
+        if (tpos.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "No valid TPOs found"
+            });
+        }
+
+        // Filter TPOs with email
+        const tposWithEmail = tpos.filter(tpo => tpo.email);
+        const tposWithoutEmail = tpos.filter(tpo => !tpo.email);
+
+        if (tposWithEmail.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "None of the selected TPOs have email addresses"
+            });
+        }
+
+        // Get PDF attachments
+        const attachments = [];
+        const pdfFiles = ['brochure.pdf', 'placement-policy.pdf'];
+        
+        for (const pdfFile of pdfFiles) {
+            const pdfPath = path.join(__dirname, '../uploads', pdfFile);
+            if (fs.existsSync(pdfPath)) {
+                const pdfContent = fs.readFileSync(pdfPath);
+                attachments.push({
+                    name: pdfFile,
+                    content: pdfContent.toString('base64'),
+                    type: 'application/pdf'
+                });
+            }
+        }
+
+        let successCount = 0;
+        let failedCount = 0;
+        const results = [];
+
+        // Send emails to each TPO
+        for (const tpo of tposWithEmail) {
+            try {
+                const emailResponse = await axios.post(
+                    "https://api.brevo.com/v3/smtp/email",
+                    {
+                        sender: {
+                            name: req.user.name || "Intern",
+                            email: process.env.SENDER_EMAIL
+                        },
+                        to: [{ email: tpo.email, name: tpo.tpoName || tpo.instituteName }],
+                        subject: subject || `TPO Collaboration Opportunity - ${tpo.instituteName}`,
+                        htmlContent: `
+                            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                                <h2 style="color: #224D59;">Dear ${tpo.tpoName || 'TPO'},</h2>
+                                <p>${message || `We are excited to connect with ${tpo.instituteName} for potential collaboration opportunities.`}</p>
+                                <br/>
+                                <p>Best regards,<br/>${req.user.name}<br/>Intern at Athenura</p>
+                                <hr style="border: 1px solid #B8CC34;"/>
+                                <p style="font-size: 12px; color: #666;">This is an automated message from Athenura TPO Management System.</p>
+                            </div>
+                        `,
+                        attachment: attachments
+                    },
+                    {
+                        headers: {
+                            "api-key": process.env.BREVO_API_KEY,
+                            "Content-Type": "application/json",
+                        },
+                    }
+                );
+
+                // Record email interaction
+                tpo.interactions.push({
+                    internId: req.user._id,
+                    studentId: req.user.studentId,
+                    internName: req.user.name,
+                    note: `Bulk email sent: ${subject}`,
+                    contactMethod: "Email",
+                    date: new Date()
+                });
+                
+                tpo.lastEmailSent = new Date();
+                await tpo.save();
+
+                successCount++;
+                results.push({
+                    tpoId: tpo._id,
+                    instituteName: tpo.instituteName,
+                    email: tpo.email,
+                    status: "success"
+                });
+
+            } catch (error) {
+                failedCount++;
+                results.push({
+                    tpoId: tpo._id,
+                    instituteName: tpo.instituteName,
+                    email: tpo.email,
+                    status: "failed",
+                    error: error.response?.data?.message || error.message
+                });
+                console.error(`Failed to send email to ${tpo.email}:`, error.message);
+            }
+        }
+
+        // Create notification for intern
+        await Notification.create({
+            recipientId: req.user._id,
+            title: "Bulk Email Sent",
+            message: `Sent ${successCount} email(s) successfully. Failed: ${failedCount}`,
+            type: "announcement",
+            read: false
+        });
+
+        res.json({
+            success: true,
+            message: `Emails sent: ${successCount} successful, ${failedCount} failed`,
+            data: {
+                total: tposWithEmail.length,
+                successCount,
+                failedCount,
+                tposWithoutEmail: tposWithoutEmail.map(t => ({
+                    id: t._id,
+                    instituteName: t.instituteName,
+                    reason: "No email address"
+                })),
+                results
+            }
+        });
+
+    } catch (error) {
+        console.error("Error in bulk email:", error);
+        res.status(500).json({
+            success: false,
+            message: error.message || "Failed to send bulk emails"
+        });
+    }
+};
+
+// ✅ Get email status for TPOs (to disable button if already emailed)
+export const getTPOEmailStatus = async (req, res) => {
+    try {
+        const tpos = await TPO.find({
+            assignedInterns: { $in: [req.user._id] }
+        }).select("_id instituteName email lastEmailSent");
+
+        const emailStatus = tpos.map(tpo => ({
+            id: tpo._id,
+            instituteName: tpo.instituteName,
+            email: tpo.email,
+            hasEmail: !!tpo.email,
+            lastEmailSent: tpo.lastEmailSent,
+            canSendEmail: !!tpo.email && (!tpo.lastEmailSent || 
+                new Date() - new Date(tpo.lastEmailSent) > 24 * 60 * 60 * 1000) // Can send after 24 hours
+        }));
+
+        res.json({
+            success: true,
+            data: emailStatus
+        });
+
+    } catch (error) {
+        console.error("Error fetching email status:", error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to fetch email status"
+        });
+    }
+};

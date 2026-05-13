@@ -10,9 +10,6 @@ const internsSchema = new mongoose.Schema({
     },
     studentId: {
         type: String,
-        unique: true,
-        sparse: true,
-        trim: true,
         default: ""
     },
     email: {
