@@ -13,7 +13,8 @@ import {
   User,
 } from "lucide-react";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+const IS_PROD = import.meta.env.PROD;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (IS_PROD ? "" : "http://localhost:5000");
 const BASE = `${API_BASE_URL}/auth`;
 
 const FloatingInput = ({
