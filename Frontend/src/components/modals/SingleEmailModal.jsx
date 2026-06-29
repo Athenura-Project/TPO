@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../utils/api';
 
-const BulkEmailModal = ({ isOpen, onClose, selectedTPOs, onComplete }) => {
+const SingleEmailModal = ({ isOpen, onClose, tpo, onComplete }) => {
     const [subject, setSubject] = useState('');
     const [message, setMessage] = useState('');
     const [files, setFiles] = useState([]);
@@ -29,13 +29,13 @@ const BulkEmailModal = ({ isOpen, onClose, selectedTPOs, onComplete }) => {
             const formData = new FormData();
             formData.append('subject', subject);
             formData.append('message', message);
-            formData.append('tpoIds', JSON.stringify(selectedTPOs.map(t => t._id)));
+            formData.append('tpoId', tpo._id);
             
             files.forEach(file => {
                 formData.append('attachments', file);
             });
 
-            const response = await api.post('/intern/bulk-send-emails', formData, {
+            const response = await api.post('/intern/send-email', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 
@@ -47,8 +47,8 @@ const BulkEmailModal = ({ isOpen, onClose, selectedTPOs, onComplete }) => {
                 alert(response.data.message || "Failed to send emails");
             }
         } catch (error) {
-            console.error("Bulk email error:", error);
-            alert(error.response?.data?.message || "Failed to send emails");
+            console.error("Email error:", error);
+            alert(error.response?.data?.message || "Failed to send email");
         } finally {
             setLoading(false);
         }
@@ -74,9 +74,9 @@ const BulkEmailModal = ({ isOpen, onClose, selectedTPOs, onComplete }) => {
                         <div className="p-6 bg-gradient-to-r from-[#224D59] to-[#1A3A43] text-white">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <h3 className="text-xl font-extrabold">Send Bulk Emails</h3>
+                                    <h3 className="text-xl font-extrabold">Send Email</h3>
                                     <p className="text-sm text-[#B8CC34] mt-1">
-                                        Sending to {selectedTPOs.length} TPO(s)
+                                        Sending to {tpo?.instituteName}
                                     </p>
                                 </div>
                                 <button
@@ -91,17 +91,17 @@ const BulkEmailModal = ({ isOpen, onClose, selectedTPOs, onComplete }) => {
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-6 space-y-5">
-                            {/* Selected TPOs Preview */}
+                            {/* Selected TPO Preview */}
                             <div className="bg-[#F5F7F2] rounded-xl p-4">
                                 <p className="text-xs font-bold text-[#224D59] uppercase tracking-wider mb-2">
-                                    Selected TPOs:
+                                    Recipient:
                                 </p>
                                 <div className="flex flex-wrap gap-2">
-                                    {selectedTPOs.map(tpo => (
-                                        <span key={tpo._id} className="px-2 py-1 bg-white rounded-lg text-xs font-medium text-[#224D59]">
+                                    {tpo && (
+                                        <span className="px-2 py-1 bg-white rounded-lg text-xs font-medium text-[#224D59]">
                                             {tpo.instituteName}
                                         </span>
-                                    ))}
+                                    )}
                                 </div>
                             </div>
 
@@ -182,7 +182,7 @@ const BulkEmailModal = ({ isOpen, onClose, selectedTPOs, onComplete }) => {
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
                                         </svg>
-                                        Send {selectedTPOs.length} Email(s)
+                                        Send Email
                                     </>
                                 )}
                             </button>
@@ -194,4 +194,4 @@ const BulkEmailModal = ({ isOpen, onClose, selectedTPOs, onComplete }) => {
     );
 };
 
-export default BulkEmailModal;
+export default SingleEmailModal;

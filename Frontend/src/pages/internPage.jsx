@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../utils/api";
 import BulkEmailModal from "../components/modals/BulkEmailModal";
+import SingleEmailModal from "../components/modals/SingleEmailModal";
 
 // Components
 import StatCard from "../components/dashboard/StatCard";
@@ -37,6 +38,8 @@ const InternDashboard = () => {
   const [activePage, setActivePage] = useState("dashboard");
   const [selectedTPOsForEmail, setSelectedTPOsForEmail] = useState([]);
   const [isBulkEmailModalOpen, setIsBulkEmailModalOpen] = useState(false);
+  const [isSingleEmailModalOpen, setIsSingleEmailModalOpen] = useState(false);
+  const [selectedTPOForEmail, setSelectedTPOForEmail] = useState(null);
   const [emailStatus, setEmailStatus] = useState({});
 
   // Fetch all data 
@@ -182,29 +185,13 @@ const InternDashboard = () => {
   };
 
   // Send single email handler
-  const handleSendSingleEmail = async (tpo) => {
+  const handleSendSingleEmail = (tpo) => {
     if (!tpo.email) {
       alert("This TPO doesn't have an email address");
       return;
     }
-
-    const subject = prompt("Enter email subject:", "TPO Collaboration Opportunity");
-    if (!subject) return;
-
-    const message = prompt("Enter your message:", `Dear ${tpo.tpoName || 'TPO'},\n\nWe are excited to connect with ${tpo.instituteName} for potential collaboration opportunities.`);
-    if (!message) return;
-
-    try {
-      await api.post("/intern/send-email", {
-        tpoId: tpo._id,
-        subject,
-        message
-      });
-      alert(`✅ Email sent successfully to ${tpo.instituteName}`);
-      fetchEmailStatus();
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to send email");
-    }
+    setSelectedTPOForEmail(tpo);
+    setIsSingleEmailModalOpen(true);
   };
 
   const handleLogout = () => {
@@ -1042,6 +1029,16 @@ const InternDashboard = () => {
           fetchEmailStatus();
           fetchAll();
         }}
+      />
+
+      <SingleEmailModal
+        isOpen={isSingleEmailModalOpen}
+        onClose={() => {
+          setIsSingleEmailModalOpen(false);
+          setSelectedTPOForEmail(null);
+        }}
+        tpo={selectedTPOForEmail}
+        onComplete={fetchEmailStatus}
       />
     </div>
   );

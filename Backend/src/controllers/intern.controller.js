@@ -8,6 +8,7 @@ import TPO from "../models/tpo.model.js";
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import axios from 'axios';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -476,18 +477,14 @@ export const sendTPOEmail = async (req, res) => {
             });
         }
 
-        // Get PDF attachments
+        // Get custom PDF attachments from frontend
         const attachments = [];
-        const pdfFiles = ['brochure.pdf', 'placement-policy.pdf']; // Your PDF file names
-        
-        for (const pdfFile of pdfFiles) {
-            const pdfPath = path.join(__dirname, '../uploads', pdfFile);
-            if (fs.existsSync(pdfPath)) {
-                const pdfContent = fs.readFileSync(pdfPath);
+        if (req.files && req.files.length > 0) {
+            for (const file of req.files) {
                 attachments.push({
-                    name: pdfFile,
-                    content: pdfContent.toString('base64'),
-                    type: 'application/pdf'
+                    name: file.originalname,
+                    content: file.buffer.toString('base64'),
+                    type: file.mimetype
                 });
             }
         }
@@ -512,7 +509,7 @@ export const sendTPOEmail = async (req, res) => {
                         <p style="font-size: 12px; color: #666;">This is an automated message from Athenura TPO Management System.</p>
                     </div>
                 `,
-                attachment: attachments
+                ...(attachments.length > 0 ? { attachment: attachments } : {})
             },
             {
                 headers: {
@@ -540,7 +537,7 @@ export const sendTPOEmail = async (req, res) => {
             recipientId: req.user._id,
             title: "Email Sent",
             message: `Email sent successfully to ${tpo.instituteName}`,
-            type: "announcement",
+            type: "success",
             read: false
         });
 
@@ -551,7 +548,7 @@ export const sendTPOEmail = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Error sending email:", error);
+        console.error("Error sending email:", error.response?.data || error);
         res.status(500).json({
             success: false,
             message: error.response?.data?.message || "Failed to send email"
@@ -562,7 +559,16 @@ export const sendTPOEmail = async (req, res) => {
 // ✅ Bulk send emails to multiple TPOs
 export const bulkSendTPOEmails = async (req, res) => {
     try {
-        const { tpoIds, subject, message } = req.body;
+        const { subject, message } = req.body;
+        // Parse tpoIds correctly since it might be sent as JSON string or array in FormData
+        let tpoIds = req.body.tpoIds;
+        if (typeof tpoIds === 'string') {
+            try {
+                tpoIds = JSON.parse(tpoIds);
+            } catch (e) {
+                tpoIds = tpoIds.split(',');
+            }
+        }
 
         if (!tpoIds || !Array.isArray(tpoIds) || tpoIds.length === 0) {
             return res.status(400).json({
@@ -595,18 +601,14 @@ export const bulkSendTPOEmails = async (req, res) => {
             });
         }
 
-        // Get PDF attachments
+        // Get custom attachments from frontend
         const attachments = [];
-        const pdfFiles = ['brochure.pdf', 'placement-policy.pdf'];
-        
-        for (const pdfFile of pdfFiles) {
-            const pdfPath = path.join(__dirname, '../uploads', pdfFile);
-            if (fs.existsSync(pdfPath)) {
-                const pdfContent = fs.readFileSync(pdfPath);
+        if (req.files && req.files.length > 0) {
+            for (const file of req.files) {
                 attachments.push({
-                    name: pdfFile,
-                    content: pdfContent.toString('base64'),
-                    type: 'application/pdf'
+                    name: file.originalname,
+                    content: file.buffer.toString('base64'),
+                    type: file.mimetype
                 });
             }
         }
@@ -637,7 +639,7 @@ export const bulkSendTPOEmails = async (req, res) => {
                                 <p style="font-size: 12px; color: #666;">This is an automated message from Athenura TPO Management System.</p>
                             </div>
                         `,
-                        attachment: attachments
+                        ...(attachments.length > 0 ? { attachment: attachments } : {})
                     },
                     {
                         headers: {
@@ -677,7 +679,7 @@ export const bulkSendTPOEmails = async (req, res) => {
                     status: "failed",
                     error: error.response?.data?.message || error.message
                 });
-                console.error(`Failed to send email to ${tpo.email}:`, error.message);
+                console.error(`Failed to send email to ${tpo.email}:`, error.response?.data || error.message);
             }
         }
 
@@ -686,7 +688,7 @@ export const bulkSendTPOEmails = async (req, res) => {
             recipientId: req.user._id,
             title: "Bulk Email Sent",
             message: `Sent ${successCount} email(s) successfully. Failed: ${failedCount}`,
-            type: "announcement",
+            type: "success",
             read: false
         });
 
