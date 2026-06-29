@@ -26,7 +26,8 @@ app.use(cors({
     origin: (origin, callback) => {
       const allowedOrigins = [
         "http://localhost:3000",
-        "http://localhost:5173"
+        "http://localhost:5173",
+        "https://tpo-mocha.vercel.app"
       ];
   
       if (!origin || allowedOrigins.includes(origin)) {
