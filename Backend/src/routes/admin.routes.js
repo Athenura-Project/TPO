@@ -46,22 +46,8 @@ import {
 const router = express.Router();
 
 /* -------------------- MULTER SETUP -------------------- */
-// Configure multer for file uploads
-const uploadDir = "uploads";
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir);
-}
-
-
-
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, uploadDir);
-    },
-    filename: function (req, file, cb) {
-        cb(null, Date.now() + "-" + file.originalname);
-    }
-});
+// Configure multer for file uploads in memory (Fixes Vercel read-only filesystem crash)
+const storage = multer.memoryStorage();
 
 const upload = multer({
     storage: storage,

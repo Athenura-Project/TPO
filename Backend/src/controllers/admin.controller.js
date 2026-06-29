@@ -962,7 +962,7 @@ export const bulkImport = async (req, res) => {
             ? importTypeInput
             : "institutes";
 
-        const workbook = XLSX.readFile(req.file.path);
+        const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const data = XLSX.utils.sheet_to_json(sheet);
 
